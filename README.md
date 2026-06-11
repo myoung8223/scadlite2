@@ -99,6 +99,7 @@ Whether installed as a PWA or loaded in the browser, the execution sequence init
 - **CodeJar** - Micro-editor powering the in-browser coding and native block indentation experience.
 - **Prism.js** - Extensible, lightweight syntax highlighter for real-time code tokenization.
 - **fflate** - High-speed, ultra-lightweight compression module for unzipping 3MF data packages in memory.
+- **Liberation Fonts** - Open-source typeface families mounted directly into the application's virtual memory layout for 3D text configurations.
 
 ## Credits & Contributions
 
@@ -110,6 +111,7 @@ Whether installed as a PWA or loaded in the browser, the execution sequence init
 - **[CodeJar (Anton Medvedev)](https://github.com/antonmedv/codejar)** — An embeddable, lightweight code editor for the browser, driving the application's core text editing, native block indentation, and multi-line formatting engine.
 - **[Prism.js](https://github.com/PrismJS/prism)** — A robust, highly extensible syntax highlighting library used to provide real-time code tokenization and visual formatting for OpenSCAD scripts.
 - **[fflate (Arjun Barrett)](https://github.com/101arrowz/fflate)** — A high-performance, ultra-lightweight compression library utilized in-memory to synchronously extract compiled 3MF web archive packages for the rendering viewport.
+- **[Liberation Fonts (Red Hat / Liberation Project)](https://github.com/liberationfonts/liberation-fonts)** — A set of metric-compatible, open-source font families (Sans, Serif, and Mono) embedded into the WebAssembly memory filesystem to provide out-of-the-box structural text generation capabilities.
 
 ## License
 
