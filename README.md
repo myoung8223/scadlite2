@@ -19,8 +19,9 @@ The core purpose of this project is to make OpenSCAD design fully accessible on 
 - **Interactive Split-Pane Workspace:** Features a fully adjustable, draggable center divider to let you seamlessly balance your screen real estate between code writing and 3D visualization.
 - **Persistent Workspace Cache:** Automatically backs up your active script to `localStorage`, safely restoring your draft and layout configurations the exact millisecond you reload or reopen the application.
 - **Automatic Preview on Load:** Intelligently triggers an immediate 3D scene compilation upon uploading any local `.scad` file, eliminating extra button clicks.
-- **Dedicated Workspace Settings Panel (⚙️):** Quick-access configuration options to change font size, hide/show the console, toggle line numbers, or reset the 3D camera back to home view.
+- **Dedicated Workspace Settings Panel (⚙️):** Quick-access configuration options to change editor options, reset the 3D camera view, access font, STL, and SVG imports, among other settings.
 - **Streamlined Diagnostic Console:** A real-time terminal UI stripped of misleading native engine filesystem warnings, focusing on compilation and rendering information, and syntax errors.
+- **Native Color & Modifier Support:** Bypasses legacy monochromatic pipelines by rendering directly to the 3MF specification. The viewport natively respects script-defined `color()` functions, custom RGB configurations, and transparency. It introduces a custom multi-pass pre-parsing layer to isolate design modifiers—rendering ghost geometry (`%`) as translucent smoky pink and highlights (`#`) as a light red alert mesh. *(Note: While robust for standard structures, the experimental parsing engine may diverge slightly from native desktop OpenSCAD behavior during deeply nested combinations of root `!`, ghost `%`, and highlight `#` modifiers).*
 
 ## Improvements and Features to Add
 
@@ -32,6 +33,7 @@ The core purpose of this project is to make OpenSCAD design fully accessible on 
 - [x] **Improve 3D Lighting and Model Texturing:** Right now the lighting needs improvement and texturing the models would improve the preview.
 - [ ] **Camera Movement Improvements:** Improve the camera movement, perhaps with translation accelleration.
 - [ ] **Orthogonal Projection:** Add a button for toggling between perspective and orthogonal 3D projection.
+- [ ] **Add Support for Color:** Add a button for toggling between perspective and orthogonal 3D projection.
 - [x] **Improve Error Highlighting:** While there's basic error highlighting now, that should be refined further.
 - [x] **Adjustable Editor/Preview Port Framing:** An adjustable, and persistant editor/preview port framing is needed.
 - [x] **Add Optional Line Numbers:** Optional line numbers in the editor would be a welcome feature.
@@ -44,6 +46,10 @@ The core purpose of this project is to make OpenSCAD design fully accessible on 
 - [ ] **Link to OpenSCAD Cheat Sheet:** The ability to pop-up the super handy OpenSCAD cheat sheet would be a nice feature to add.
 - [ ] **Improve PWA Icon:** The icon is a little dark. It could use a snazzier icon.
 - [x] **F5 to Preview:** Press F5 key to quickly initiate a preview, just like in OpenSCAD.  Message overlay indicating preview build in progress.
+- [x] **Native Color & Material Support via 3MF:** Replace the legacy single-color `scad2stl` pipeline entirely, and shift output targets to the **3MF (3D Manufacturing Format)** specification to natively export color, multi-material, and geometry metadata directly from the WebAssembly core.
+- [x] **Client-Side Archive Extraction (`fflate` + `ThreeMFLoader`):** Implement an in-memory zip-decompression layer that bridges `fflate` with the Three.js 3MF loader, allowing zipped 3MF models to be unpacked and loaded seamlessly on the fly with zero backend overhead.
+- [x] **Dynamic Alpha Transparency & Shading:** Program a smart material processing engine that scans compiled vertex paths to honor script-defined opacity (`alpha` values), configure overlapping face transparency passes, and fall back gracefully to global workspace theme selections if no structural color is declared.
+- [x] **Multi-Pass Modifier Shading Layer:** Capitalize on the new color pipeline to support advanced OpenSCAD design modifiers, adding script token pre-parsing that targets and renders ghost geometry (`%`) as a translucent smoky pink and highlights (`#`) as a glowing semi-transparent red alert mesh.
 
 ## Getting Started
 
@@ -69,7 +75,9 @@ Whether installed as a PWA or loaded in the browser, the execution sequence init
 - **Loading Files:** Click the **Open** button or press **[Ctrl] + [O]** to load `.scad` files into the editor workspace.
 - **Saving Files:** Click the **Save** button or press **[Ctrl] + [S]** to download the current `.scad` code to your local machine.
 - **Smart Code Editor:** The workspace features intelligent formatting. Press `Tab` or `Shift + Tab` to quickly indent or outdent multi-line blocks of code. The editor also features real-time syntax highlighting, bi-directional bracket matching, and will automatically highlight the exact line of code if the compiler encounters a syntax error.
-- **Previewing:** Click the **Preview** button, press **[F5]***, **[F6]**, or use the **[Ctrl] + [Enter]** hotkey combo to compile your `.scad` code into a 3D model displayed in the right pane.
+- **Previewing:** Click the **Preview** button, press **[F5]**, or use the **[Ctrl] + [Enter]** hotkey combo to compile your `.scad` code into a fast 3D preview in the right pane. This utilizes a custom multi-pass compilation layer to accurately map OpenSCAD design modifiers, rendering ghost geometry (`%`) as translucent smoky pink and highlights (`#`) as a red alert mesh.
+- **Rendering:** Click the **Render** button or press **[F6]** to perform a formal, single-pass evaluation of your code. This computes a finalized solid geometry representation: elements marked with the ghost modifier (`%`) are completely ignored, and components with the highlight modifier (`#`) are processed as standard solid elements, preparing the workspace for a clean manufacturing export.
+- **Exporting to STL:** Click the **Export** button or press **[F7]** to directly invoke the core OpenSCAD WebAssembly engine to compile and stream a math-perfect, high-resolution `.stl` file straight to your local downloads folder, ensuring a pristine manifold optimized for 3D slicing software.
 - **3D Viewport & Display:** - Click the **Solid / Wireframe** button to toggle the mesh rendering mode.
   - Click the **Change (Color)** button (the color swatch) to open the native color picker and dynamically change the 3D model's material color.
   - You can drag the center gutter left or right to seamlessly adjust the width between the code editor and the 3D viewport.
@@ -87,18 +95,21 @@ Whether installed as a PWA or loaded in the browser, the execution sequence init
 
 - **WebAssembly (WASM)** - High-performance port of the native OpenSCAD engine.
 - **Vanilla JavaScript, HTML5, & CSS3** - Lightweight PWA architecture optimized for offline use and instant paints.
+- **Three.js** - High-performance WebGL graphics pipeline used to render the live 3D viewports and handle interactive camera manipulations.
 - **CodeJar** - Micro-editor powering the in-browser coding and native block indentation experience.
 - **Prism.js** - Extensible, lightweight syntax highlighter for real-time code tokenization.
+- **fflate** - High-speed, ultra-lightweight compression module for unzipping 3MF data packages in memory.
 
 ## Credits & Contributions
 
 - **Mike Young** — Lead Architect & Creator.
 - **Gemini (Flash, Thinking, & Pro)** — AI Engineering Assistant, Code Optimization, & Regex Architecture.
+- **Anthropic Claude (Sonnet 4.6)** — Additional AI Engineering Assistant, instrumental in implementation of migration toward multi-pass rendering.
 - **[OpenSCAD WASM](https://github.com/openscad/openscad-wasm)** — The official, sandboxed WebAssembly port translating functional CAD code into raw geometries entirely client-side.
-- **[scad2stl (Code for Fukui)](https://github.com/code4fukui/scad2stl)** — The precision runtime utility for handling script parsing and streaming compiled mesh translations safely out of the virtual WASM environment.
 - **[Three.js (mrdoob)](https://github.com/mrdoob/three.js)** — Created by Ricardo Cabello (mrdoob), providing the high-performance WebGL 3D graphics pipeline, along with the essential `STLLoader` and `OrbitControls` companion modules.
 - **[CodeJar (Anton Medvedev)](https://github.com/antonmedv/codejar)** — An embeddable, lightweight code editor for the browser, driving the application's core text editing, native block indentation, and multi-line formatting engine.
 - **[Prism.js](https://github.com/PrismJS/prism)** — A robust, highly extensible syntax highlighting library used to provide real-time code tokenization and visual formatting for OpenSCAD scripts.
+- **[fflate (101010-coder)](https://github.com/101010-coder/fflate)** — A high-performance, ultra-lightweight compression library utilized in-memory to synchronously extract compiled 3MF web archive packages for the rendering viewport.
 
 ## License
 
