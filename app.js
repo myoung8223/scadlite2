@@ -924,7 +924,7 @@ jar.updateCode(`$fn = 25;   // number of segments set to 25
 
 linear_extrude(height = 4) {   // 3D text
 	text(
-		text = "Basic OpenSCAD PWA", 
+		text = "SCADLite", 
 		size = 14, 
 		font = "Liberation Sans:style=Bold", 
 		halign = "center", 
@@ -1903,7 +1903,7 @@ const licensesTextContainer = document.getElementById('licenses-text-container')
 // 📄 CREDITS AND LICENSE TEXT LITERAL
 const THIRD_PARTY_LICENSES_TEXT = `CREDITS & THIRD-PARTY OPEN SOURCE NOTICES
 
-Basic OpenSCAD PWA was architected, designed, and tested by Michael Young. 
+SCADLite was architected, designed, and tested by Michael Young. 
 
 The vast majority of the code syntax in this application was generated 
 using Google Gemini Large Language Models (including Gemini Flash, Gemini 
@@ -1917,11 +1917,11 @@ extensive behavioral testing, and orchestrating the integration of the
 third-party libraries listed below.
 
 ===========================================================================
-                  Basic OpenSCAD PWA (GNU GPL v2 License)
+                       SCADLite (GNU GPL v2 License)
 ===========================================================================
-<a href="https://github.com/myoung8223/boscpwa" target="_blank" style="color: #52b1ff; text-decoration: underline; font-weight: bold;">https://github.com/myoung8223/boscpwa</a>
+<a href="https://github.com/myoung8223/scadlite" target="_blank" style="color: #52b1ff; text-decoration: underline; font-weight: bold;">https://github.com/myoung8223/scadlite</a>
 
-Basic OpenSCAD PWA is Copyright (c) 2026 Michael Young.
+SCADLite is Copyright (c) 2026 Michael Young.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -1988,7 +1988,7 @@ bottom of this document for the full licensing terms and conditions.
 ===========================================================================
                   GNU GENERAL PUBLIC LICENSE (VERSION 2)
 ===========================================================================
-Applies to: Basic OpenSCAD PWA, OpenSCAD WASM
+Applies to: SCADLite, OpenSCAD WASM
 
                     GNU GENERAL PUBLIC LICENSE
                        Version 2, June 1991
