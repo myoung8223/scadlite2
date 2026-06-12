@@ -1504,59 +1504,40 @@ btnExport.addEventListener('click', () => {
         return;
     }
     
-    try {
-        logToConsole(`⚙️ Forcing absolute orientation matrices for STL export...`);
+	try {
+        logToConsole(`⚙️ Preparing geometry for STL export...`);
         
         const exporter = new THREE.STLExporter();
         
-        // 1. Structural clone of the visual group structure
+        // Clone the mesh group
         const exportClone = currentMesh.clone();
         
-        // 2. Break the link to the live preview's sharing by deep-cloning inner geometries
+        // Deep clone geometries to avoid modifying the live preview
         exportClone.traverse((child) => {
             if (child.isMesh && child.geometry) {
                 child.geometry = child.geometry.clone();
             }
         });
 
-		// 3. 🔥 THE FINAL PIECE: Lay flat, then apply a pure quaternion spin on the up-vector
-		exportClone.rotation.set(0, 0, 0); 
-		
-		// First: Lay it perfectly flat on the bed (the stable layout we established)
-		exportClone.rotation.z = Math.PI / 2;
-		
-		// Force Three.js to process and bake the horizontal orientation first
-		exportClone.updateMatrix();
-		exportClone.updateMatrixWorld(true);
-		
-		// problem with this!
-		// Second: Rotate exactly 90 degrees around the slicer's Up Vector (Z-Axis)
-		// Note: If it spins clockwise but you wanted counter-clockwise, change Math.PI / 2 to -Math.PI / 2
-		const upAxis = new THREE.Vector3(0, 0, 1);
-		const spinQuaternion = new THREE.Quaternion().setFromAxisAngle(upAxis, 0);   // -Math.PI / 2
-		
-		// Apply the spin directly to the object's combined matrix
-		exportClone.applyQuaternion(spinQuaternion);
-		
-		// 4. Final bake before sending the stable coordinates to the STL exporter
-		exportClone.updateMatrix();
-		exportClone.updateMatrixWorld(true);
-		
-        logToConsole(`📦 Packaging corrected coordinate arrays into binary STL...`);
+        // The live mesh has rotation.x = -PI/2 applied to correct OpenSCAD→Three.js axes.
+        // For STL export we need to undo that and apply the correct OpenSCAD→slicer transform.
+        // OpenSCAD uses Z-up, slicers use Z-up, so we just need to undo the Three.js display rotation.
+        exportClone.rotation.set(0, 0, 0);
+        exportClone.updateMatrix();
+        exportClone.updateMatrixWorld(true);
+
+        logToConsole(`📦 Packaging geometry into binary STL...`);
         
-        // 5. Parse the fully updated and baked structural clone
         const stlResult = exporter.parse(exportClone, { binary: true });
         
-        // 6. Package and Download
         const stlBlob = new Blob([stlResult], { type: 'application/octet-stream' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(stlBlob);
         
         const projectName = projectNameInput.value.trim() || "openscad_model";
-        link.download = `${projectName}.stl`; 
+        link.download = `${projectName}.stl`;
         link.click();
         
-        // 7. Housekeeping: Free up memory from temporary cloned objects
         exportClone.traverse((child) => {
             if (child.isMesh && child.geometry) child.geometry.dispose();
         });
