@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "249"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "250"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -542,22 +542,37 @@ let lastHighlightedLine = null;
 function applyLineHighlight() {
     clearLineHighlight();
     if (!lineHighlightingEnabled || !editorElement) return;
-
     const sel = window.getSelection();
     if (!sel.rangeCount) return;
     const range = sel.getRangeAt(0);
     if (!editorElement.contains(range.startContainer)) return;
 
-    // Get the bounding rect of the current line by using a zero-width range
+    const editorRect = editorElement.getBoundingClientRect();
+    const lineHeight = parseFloat(getComputedStyle(editorElement).lineHeight) || 21;
+
+    // Try to get position from bounding rect first
     const lineRange = document.createRange();
     lineRange.setStart(range.startContainer, range.startOffset);
     lineRange.collapse(true);
-
-    // Get the cursor rect and editor rect
     const cursorRect = lineRange.getBoundingClientRect();
-    const editorRect = editorElement.getBoundingClientRect();
 
-    if (cursorRect.top === 0 && cursorRect.left === 0) return; // invalid rect
+    let topOffset;
+    if (cursorRect.top === 0 && cursorRect.left === 0) {
+        // Empty line — calculate position from line number instead
+        const text = editorElement.textContent;
+        let cursorIndex = 0;
+        const tw = document.createTreeWalker(editorElement, NodeFilter.SHOW_TEXT);
+        let n = tw.nextNode();
+        while (n) {
+            if (n === range.startContainer) { cursorIndex += range.startOffset; break; }
+            cursorIndex += n.textContent.length;
+            n = tw.nextNode();
+        }
+        const lineNumber = text.substring(0, cursorIndex).split('\n').length - 1;
+        topOffset = lineNumber * lineHeight;
+    } else {
+        topOffset = cursorRect.top - editorRect.top + editorElement.scrollTop;
+    }
 
     // Create or reuse the highlight overlay div
     let highlightDiv = document.getElementById('line-highlight-overlay');
@@ -573,16 +588,11 @@ function applyLineHighlight() {
         editorElement.appendChild(highlightDiv);
     }
 
-    // Position it over the current line
-    const lineHeight = parseFloat(getComputedStyle(editorElement).lineHeight) || 21;
-    const topOffset = cursorRect.top - editorRect.top + editorElement.scrollTop;
-
     highlightDiv.style.top = `${topOffset}px`;
     highlightDiv.style.height = `${lineHeight}px`;
     highlightDiv.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
     highlightDiv.style.borderLeft = '2px solid rgba(0, 194, 255, 0.4)';
     highlightDiv.style.display = 'block';
-
     lastHighlightedLine = highlightDiv;
 }
 
