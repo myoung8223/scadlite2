@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "248"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "249"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -540,55 +540,56 @@ document.head.appendChild(lineHighlightStyle);
 let lastHighlightedLine = null;
 
 function applyLineHighlight() {
+    clearLineHighlight();
     if (!lineHighlightingEnabled || !editorElement) return;
-
-    if (lastHighlightedLine) {
-        lastHighlightedLine.classList.remove('active-line-highlight');
-        lastHighlightedLine = null;
-    }
 
     const sel = window.getSelection();
     if (!sel.rangeCount) return;
     const range = sel.getRangeAt(0);
+    if (!editorElement.contains(range.startContainer)) return;
 
-    let cursorIndex = 0;
-    const walker = document.createTreeWalker(editorElement, NodeFilter.SHOW_TEXT);
-    let node = walker.nextNode();
-    while (node) {
-        if (node === range.startContainer) { cursorIndex += range.startOffset; break; }
-        cursorIndex += node.textContent.length;
-        node = walker.nextNode();
+    // Get the bounding rect of the current line by using a zero-width range
+    const lineRange = document.createRange();
+    lineRange.setStart(range.startContainer, range.startOffset);
+    lineRange.collapse(true);
+
+    // Get the cursor rect and editor rect
+    const cursorRect = lineRange.getBoundingClientRect();
+    const editorRect = editorElement.getBoundingClientRect();
+
+    if (cursorRect.top === 0 && cursorRect.left === 0) return; // invalid rect
+
+    // Create or reuse the highlight overlay div
+    let highlightDiv = document.getElementById('line-highlight-overlay');
+    if (!highlightDiv) {
+        highlightDiv = document.createElement('div');
+        highlightDiv.id = 'line-highlight-overlay';
+        highlightDiv.style.position = 'absolute';
+        highlightDiv.style.left = '0';
+        highlightDiv.style.right = '0';
+        highlightDiv.style.pointerEvents = 'none';
+        highlightDiv.style.zIndex = '0';
+        editorElement.style.position = 'relative';
+        editorElement.appendChild(highlightDiv);
     }
 
-    const text = editorElement.textContent;
-    const lineStart = text.lastIndexOf('\n', cursorIndex - 1) + 1;
+    // Position it over the current line
+    const lineHeight = parseFloat(getComputedStyle(editorElement).lineHeight) || 21;
+    const topOffset = cursorRect.top - editorRect.top + editorElement.scrollTop;
 
-    let absOffset = 0;
-    const walker2 = document.createTreeWalker(editorElement, NodeFilter.SHOW_TEXT);
-    let textNode = walker2.nextNode();
-    while (textNode) {
-        const nodeLen = textNode.textContent.length;
-        if (lineStart >= absOffset && lineStart < absOffset + nodeLen) {
-            let el = textNode.parentNode;
-            while (el && el !== editorElement && el.parentNode !== editorElement) {
-                el = el.parentNode;
-            }
-            if (el && el !== editorElement) {
-                el.classList.add('active-line-highlight');
-                lastHighlightedLine = el;
-            }
-            break;
-        }
-        absOffset += nodeLen;
-        textNode = walker2.nextNode();
-    }
+    highlightDiv.style.top = `${topOffset}px`;
+    highlightDiv.style.height = `${lineHeight}px`;
+    highlightDiv.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+    highlightDiv.style.borderLeft = '2px solid rgba(0, 194, 255, 0.4)';
+    highlightDiv.style.display = 'block';
+
+    lastHighlightedLine = highlightDiv;
 }
 
 function clearLineHighlight() {
-    if (lastHighlightedLine) {
-        lastHighlightedLine.classList.remove('active-line-highlight');
-        lastHighlightedLine = null;
-    }
+    const highlightDiv = document.getElementById('line-highlight-overlay');
+    if (highlightDiv) highlightDiv.style.display = 'none';
+    lastHighlightedLine = null;
 }
 
 if (editorElement) {
