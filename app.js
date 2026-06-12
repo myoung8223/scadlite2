@@ -1054,7 +1054,7 @@ translate([-50, 40, 0])
 sphere(d=25);             // sphere
 
 translate([0, 40, 0])
-rotate_extrude(convexity = 10)   // torus
+rotate_extrude(angle = 360, convexity = 10)   // torus
 	translate([14, 0, 0])
 		circle(r = 7);
 
