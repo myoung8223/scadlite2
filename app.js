@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "251"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "252"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -213,14 +213,15 @@ if (editorElement) {
             editorElement.dispatchEvent(fakeRedoEvent);
         }
 
-        if (event.key === 'Delete') {
+		if (event.key === 'Delete') {
+            if (event.ctrlKey || event.metaKey) return; // let Ctrl+Del pass through
             event.preventDefault();
             event.stopImmediatePropagation();
             const { start, end } = getSelectionCharacterOffsetWithin(editorElement);
-            if (start !== end) return;
             const value = jar.toString();
-            if (start >= value.length) return;
-            const newCode = value.substring(0, start) + value.substring(start + 1);
+            if (start >= value.length && start === end) return; // at end of file, nothing to delete
+            const deleteEnd = start !== end ? end : start + 1;
+            const newCode = value.substring(0, start) + value.substring(deleteEnd);
             jar.updateCode(newCode);
             setSelectionCharacterOffsetWithin(editorElement, start, start);
         }
