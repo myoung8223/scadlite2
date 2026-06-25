@@ -361,6 +361,10 @@ function applyInlineBracketMatching(editorDiv) {
     const oldHighlights = editorDiv.querySelectorAll('.bracket-match-glow, .bracket-mismatch-glow');
     oldHighlights.forEach(span => span.classList.remove('bracket-match-glow', 'bracket-mismatch-glow'));
 
+	// Defensive: querySelectorAll searches descendants only, so a glow that ever
+    // landed on the editor element itself would be unreachable. Clear it directly.
+    editorDiv.classList.remove('bracket-match-glow', 'bracket-mismatch-glow');
+	
     const selection = window.getSelection();
     if (!selection.rangeCount) return;
     
@@ -429,17 +433,27 @@ function applyInlineBracketMatching(editorDiv) {
         }
     }
 
-    let absoluteOffset = 0, targetSpanNode = null, matchSpanNode = null;
+	let absoluteOffset = 0, targetTextNode = null, matchTextNode = null;
     const walker = document.createTreeWalker(editorDiv, NodeFilter.SHOW_TEXT);
     let textNode = walker.nextNode();
-
     while (textNode) {
         const nodeLength = textNode.textContent.length;
-        if (targetIndex >= absoluteOffset && targetIndex < absoluteOffset + nodeLength) targetSpanNode = textNode.parentNode;
-        if (matchIndex !== -1 && matchIndex >= absoluteOffset && matchIndex < absoluteOffset + nodeLength) matchSpanNode = textNode.parentNode;
+        if (targetIndex >= absoluteOffset && targetIndex < absoluteOffset + nodeLength) targetTextNode = textNode;
+        if (matchIndex !== -1 && matchIndex >= absoluteOffset && matchIndex < absoluteOffset + nodeLength) matchTextNode = textNode;
         absoluteOffset += nodeLength;
         textNode = walker.nextNode();
     }
+
+    // Resolve to the nearest wrapping <span> that is STRICTLY inside the editor.
+    // If a bracket sits in a bare text node (parent === editor), return null and
+    // skip the glow — never style the editor element itself.
+    const resolveSpan = (tn) => {
+        let el = tn ? tn.parentNode : null;
+        while (el && el !== editorDiv && el.nodeName !== 'SPAN') el = el.parentNode;
+        return (el && el !== editorDiv && el.nodeName === 'SPAN') ? el : null;
+    };
+    const targetSpanNode = resolveSpan(targetTextNode);
+    const matchSpanNode  = resolveSpan(matchTextNode);
 
     if (targetSpanNode) {
         if (matchIndex !== -1 && matchSpanNode) {
@@ -449,7 +463,7 @@ function applyInlineBracketMatching(editorDiv) {
             targetSpanNode.classList.add('bracket-mismatch-glow');
         }
     }
-
+	
 	// guard the class additions so they only ever land on real child spans, never on #editor itself
 	if (targetSpanNode && targetSpanNode !== editorDiv) {
         if (matchIndex !== -1 && matchSpanNode && matchSpanNode !== editorDiv) {
