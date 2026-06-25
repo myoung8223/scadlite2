@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "255"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "256"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -198,11 +198,10 @@ if (editorElement) {
     });
     
 	editorElement.addEventListener('keyup', (e) => {
-        const triggerKeys = [
-            'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown',
-            '(', ')', '{', '}', '[', ']'
-        ];
-        if (bracketMatchingEnabled && triggerKeys.includes(e.key)) {
+        // ✨ ONLY navigation keys here. jar.onUpdate handles actual typing!
+        const navKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'];
+        
+        if (bracketMatchingEnabled && navKeys.includes(e.key)) {
             applyInlineBracketMatching(editorElement);
         }
     });
@@ -738,15 +737,20 @@ if (editorElement && lineNumbersDiv && toggleLinesBtn) {
     };
     triggerLineUpdate = updateLineNumbers;
 
-    jar.onUpdate((code) => {
-		rawEditorCode = code;  // keep in sync with editor changes
+	jar.onUpdate((code) => {
+        rawEditorCode = code; 
         if (editorElement.querySelectorAll('.editor-error-line-glow').length > 0 && lineNumbersDiv.innerHTML.includes('gutter-error-flare')) {
             editorElement.querySelectorAll('.editor-error-line-glow').forEach(el => el.classList.remove('editor-error-line-glow'));
         }
-		updateLineNumbers(code);
-		localStorage.setItem('openscad_editor_cache', code);
-		applyLineHighlight(); // 🆕 highlight now follows typing, not just navigation
-	});
+        updateLineNumbers(code);
+        localStorage.setItem('openscad_editor_cache', code);
+        applyLineHighlight(); 
+        
+        // ✨ Handles typing/pasting AFTER Prism finishes rendering
+        if (bracketMatchingEnabled) {
+            applyInlineBracketMatching(editorElement);
+        }
+    });
 
 	editorElement.addEventListener('scroll', () => {
 		lineNumbersDiv.scrollTop = editorElement.scrollTop;
