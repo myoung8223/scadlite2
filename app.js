@@ -366,22 +366,11 @@ function applyInlineBracketMatching(editorDiv) {
 
     const selection = window.getSelection();
     if (!selection.rangeCount) return;
-
-	/*
-    const range = selection.getRangeAt(0);
-    const textContent = editorDiv.textContent;
-    let cursorIndex = 0;
-    const treeWalker = document.createTreeWalker(editorDiv, NodeFilter.SHOW_TEXT);
-    let currentNode = treeWalker.nextNode();
     
-    while (currentNode) {
-        if (currentNode === range.startContainer) { cursorIndex += range.startOffset; break; }
-        cursorIndex += currentNode.textContent.length;
-        currentNode = treeWalker.nextNode();
-    }
-	*/
-
-	// ✨ REPLACING the 10-line TreeWalker loop with the robust selection calculator
+    // ✨ CRITICAL: We still need the raw text to search for brackets!
+    const textContent = editorDiv.textContent; 
+    
+    // ✨ Our robust offset calculator
     const { start: cursorIndex } = getSelectionCharacterOffsetWithin(editorDiv);
 
     const partners = { '{': '}', '}': '{', '[': ']', ']': '[', '(': ')', ')': '(' };
