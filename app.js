@@ -437,10 +437,33 @@ function applyInlineBracketMatching(editorDiv) {
     const walker = document.createTreeWalker(editorDiv, NodeFilter.SHOW_TEXT);
     let textNode = walker.nextNode();
 
-    while (textNode) {
+	while (textNode) {
         const nodeLength = textNode.textContent.length;
-        if (targetIndex >= absoluteOffset && targetIndex < absoluteOffset + nodeLength) targetSpanNode = textNode.parentNode;
-        if (matchIndex !== -1 && matchIndex >= absoluteOffset && matchIndex < absoluteOffset + nodeLength) matchSpanNode = textNode.parentNode;
+        
+        // 1. Check target node
+        if (targetIndex >= absoluteOffset && targetIndex < absoluteOffset + nodeLength) {
+            targetSpanNode = textNode.parentNode;
+            // FIX: Prevent highlighting the entire editor if the text is unwrapped
+            if (targetSpanNode === editorDiv) {
+                const spanWrap = document.createElement('span');
+                editorDiv.insertBefore(spanWrap, textNode);
+                spanWrap.appendChild(textNode);
+                targetSpanNode = spanWrap;
+            }
+        }
+        
+        // 2. Check matching partner node
+        if (matchIndex !== -1 && matchIndex >= absoluteOffset && matchIndex < absoluteOffset + nodeLength) {
+            matchSpanNode = textNode.parentNode;
+            // FIX: Prevent highlighting the entire editor if the text is unwrapped
+            if (matchSpanNode === editorDiv) {
+                const spanWrap = document.createElement('span');
+                editorDiv.insertBefore(spanWrap, textNode);
+                spanWrap.appendChild(textNode);
+                matchSpanNode = spanWrap;
+            }
+        }
+        
         absoluteOffset += nodeLength;
         textNode = walker.nextNode();
     }
