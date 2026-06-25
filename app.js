@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "254"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "253"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -361,10 +361,6 @@ function applyInlineBracketMatching(editorDiv) {
     const oldHighlights = editorDiv.querySelectorAll('.bracket-match-glow, .bracket-mismatch-glow');
     oldHighlights.forEach(span => span.classList.remove('bracket-match-glow', 'bracket-mismatch-glow'));
 
-	// Defensive: querySelectorAll searches descendants only, so a glow that ever
-    // landed on the editor element itself would be unreachable. Clear it directly.
-    editorDiv.classList.remove('bracket-match-glow', 'bracket-mismatch-glow');
-	
     const selection = window.getSelection();
     if (!selection.rangeCount) return;
     
@@ -433,27 +429,17 @@ function applyInlineBracketMatching(editorDiv) {
         }
     }
 
-	let absoluteOffset = 0, targetTextNode = null, matchTextNode = null;
+    let absoluteOffset = 0, targetSpanNode = null, matchSpanNode = null;
     const walker = document.createTreeWalker(editorDiv, NodeFilter.SHOW_TEXT);
     let textNode = walker.nextNode();
+
     while (textNode) {
         const nodeLength = textNode.textContent.length;
-        if (targetIndex >= absoluteOffset && targetIndex < absoluteOffset + nodeLength) targetTextNode = textNode;
-        if (matchIndex !== -1 && matchIndex >= absoluteOffset && matchIndex < absoluteOffset + nodeLength) matchTextNode = textNode;
+        if (targetIndex >= absoluteOffset && targetIndex < absoluteOffset + nodeLength) targetSpanNode = textNode.parentNode;
+        if (matchIndex !== -1 && matchIndex >= absoluteOffset && matchIndex < absoluteOffset + nodeLength) matchSpanNode = textNode.parentNode;
         absoluteOffset += nodeLength;
         textNode = walker.nextNode();
     }
-
-    // Resolve to the nearest wrapping <span> that is STRICTLY inside the editor.
-    // If a bracket sits in a bare text node (parent === editor), return null and
-    // skip the glow — never style the editor element itself.
-    const resolveSpan = (tn) => {
-        let el = tn ? tn.parentNode : null;
-        while (el && el !== editorDiv && el.nodeName !== 'SPAN') el = el.parentNode;
-        return (el && el !== editorDiv && el.nodeName === 'SPAN') ? el : null;
-    };
-    const targetSpanNode = resolveSpan(targetTextNode);
-    const matchSpanNode  = resolveSpan(matchTextNode);
 
     if (targetSpanNode) {
         if (matchIndex !== -1 && matchSpanNode) {
@@ -463,17 +449,6 @@ function applyInlineBracketMatching(editorDiv) {
             targetSpanNode.classList.add('bracket-mismatch-glow');
         }
     }
-	
-	// guard the class additions so they only ever land on real child spans, never on #editor itself
-	if (targetSpanNode && targetSpanNode !== editorDiv) {
-        if (matchIndex !== -1 && matchSpanNode && matchSpanNode !== editorDiv) {
-            targetSpanNode.classList.add('bracket-match-glow');
-            matchSpanNode.classList.add('bracket-match-glow');
-        } else {
-            targetSpanNode.classList.add('bracket-mismatch-glow');
-        }
-    }
-	
 }
 
 // ==========================================================================
@@ -738,16 +713,12 @@ if (editorElement && lineNumbersDiv && toggleLinesBtn) {
 
     jar.onUpdate((code) => {
 		rawEditorCode = code;  // keep in sync with editor changes
-        //if (editorElement.querySelectorAll('.editor-error-line-glow').length > 0 && lineNumbersDiv.innerHTML.includes('gutter-error-flare')) {
-        //    editorElement.querySelectorAll('.editor-error-line-glow').forEach(el => el.classList.remove('editor-error-line-glow'));
-        //}
-		//updateLineNumbers(code);
-		//localStorage.setItem('openscad_editor_cache', code);
+        if (editorElement.querySelectorAll('.editor-error-line-glow').length > 0 && lineNumbersDiv.innerHTML.includes('gutter-error-flare')) {
+            editorElement.querySelectorAll('.editor-error-line-glow').forEach(el => el.classList.remove('editor-error-line-glow'));
+        }
+		updateLineNumbers(code);
+		localStorage.setItem('openscad_editor_cache', code);
 		applyLineHighlight(); // 🆕 highlight now follows typing, not just navigation
-
-		// 🆕 bracket matching now follows typing — runs post-caret-restore,
-		// so the selection it reads is valid (unlike the old highlight-callback spot)
-		if (bracketMatchingEnabled) applyInlineBracketMatching(editorElement);		
 	});
 
 	editorElement.addEventListener('scroll', () => {
