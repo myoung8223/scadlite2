@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "255"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "256"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -198,10 +198,7 @@ if (editorElement) {
     });
     
 	editorElement.addEventListener('keyup', (e) => {
-        const triggerKeys = [
-            'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown',
-            '(', ')', '{', '}', '[', ']'
-        ];
+        const triggerKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'];
         if (bracketMatchingEnabled && triggerKeys.includes(e.key)) {
             applyInlineBracketMatching(editorElement);
         }
@@ -365,6 +362,10 @@ function applyInlineBracketMatching(editorDiv) {
     const oldHighlights = editorDiv.querySelectorAll('.bracket-match-glow, .bracket-mismatch-glow');
     oldHighlights.forEach(span => span.classList.remove('bracket-match-glow', 'bracket-mismatch-glow'));
 
+	// querySelectorAll only matches descendants, so a glow that ever landed on
+    // the editor element itself would be unreachable above. Clear it directly.
+    editorDiv.classList.remove('bracket-match-glow', 'bracket-mismatch-glow');
+
     const selection = window.getSelection();
     if (!selection.rangeCount) return;
     
@@ -433,40 +434,29 @@ function applyInlineBracketMatching(editorDiv) {
         }
     }
 
-    let absoluteOffset = 0, targetSpanNode = null, matchSpanNode = null;
+	// Resolve the text node containing each index — READ-ONLY, no DOM mutation.
+    let absoluteOffset = 0, targetTextNode = null, matchTextNode = null;
     const walker = document.createTreeWalker(editorDiv, NodeFilter.SHOW_TEXT);
     let textNode = walker.nextNode();
-
-	while (textNode) {
+    while (textNode) {
         const nodeLength = textNode.textContent.length;
-        
-        // 1. Check target node
-        if (targetIndex >= absoluteOffset && targetIndex < absoluteOffset + nodeLength) {
-            targetSpanNode = textNode.parentNode;
-            // FIX: Prevent highlighting the entire editor if the text is unwrapped
-            if (targetSpanNode === editorDiv) {
-                const spanWrap = document.createElement('span');
-                editorDiv.insertBefore(spanWrap, textNode);
-                spanWrap.appendChild(textNode);
-                targetSpanNode = spanWrap;
-            }
-        }
-        
-        // 2. Check matching partner node
-        if (matchIndex !== -1 && matchIndex >= absoluteOffset && matchIndex < absoluteOffset + nodeLength) {
-            matchSpanNode = textNode.parentNode;
-            // FIX: Prevent highlighting the entire editor if the text is unwrapped
-            if (matchSpanNode === editorDiv) {
-                const spanWrap = document.createElement('span');
-                editorDiv.insertBefore(spanWrap, textNode);
-                spanWrap.appendChild(textNode);
-                matchSpanNode = spanWrap;
-            }
-        }
-        
+        if (targetIndex >= absoluteOffset && targetIndex < absoluteOffset + nodeLength) targetTextNode = textNode;
+        if (matchIndex !== -1 && matchIndex >= absoluteOffset && matchIndex < absoluteOffset + nodeLength) matchTextNode = textNode;
         absoluteOffset += nodeLength;
         textNode = walker.nextNode();
     }
+
+    // Climb to the nearest wrapping <span> strictly inside the editor. If the
+    // bracket sits in a bare text node (parent === editor), return null and skip
+    // the glow — never style the editor element, and never insert nodes (a DOM
+    // mutation here can retrigger CodeJar's highlight and wipe the glow we add).
+    const resolveSpan = (tn) => {
+        let el = tn ? tn.parentNode : null;
+        while (el && el !== editorDiv && el.nodeName !== 'SPAN') el = el.parentNode;
+        return (el && el !== editorDiv && el.nodeName === 'SPAN') ? el : null;
+    };
+    const targetSpanNode = resolveSpan(targetTextNode);
+    const matchSpanNode  = resolveSpan(matchTextNode);
 
     if (targetSpanNode) {
         if (matchIndex !== -1 && matchSpanNode) {
@@ -746,6 +736,7 @@ if (editorElement && lineNumbersDiv && toggleLinesBtn) {
 		updateLineNumbers(code);
 		localStorage.setItem('openscad_editor_cache', code);
 		applyLineHighlight(); // 🆕 highlight now follows typing, not just navigation
+		if (bracketMatchingEnabled) applyInlineBracketMatching(editorElement); // 🆕 post-highlight, so Prism can't wipe it
 	});
 
 	editorElement.addEventListener('scroll', () => {
