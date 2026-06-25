@@ -469,6 +469,22 @@ function applyInlineBracketMatching(editorDiv) {
 }
 
 // ==========================================================================
+// 👁️ BRACKET GLOW PERSISTENCE OBSERVER
+// CodeJar's highlight is debounced, so it can rewrite #editor's innerHTML
+// AFTER onUpdate fires — wiping any glow we added. Instead of racing that
+// timing, we watch for the rewrite and reapply. Prism's rewrite is a childList
+// mutation; our classList.add is an attribute mutation. By observing childList
+// only, our own glow never retriggers this — no infinite loop.
+// ==========================================================================
+if (editorElement && typeof MutationObserver !== 'undefined') {
+    const bracketGlowObserver = new MutationObserver(() => {
+        if (!bracketMatchingEnabled) return;
+        applyInlineBracketMatching(editorElement);
+    });
+    bracketGlowObserver.observe(editorElement, { childList: true, subtree: true });
+}
+
+// ==========================================================================
 // 🛠️ COMPILATION ERROR HIGHLIGHTING
 // ==========================================================================
 function highlightErrorLine(lineNumber) {
@@ -736,7 +752,6 @@ if (editorElement && lineNumbersDiv && toggleLinesBtn) {
 		updateLineNumbers(code);
 		localStorage.setItem('openscad_editor_cache', code);
 		applyLineHighlight(); // 🆕 highlight now follows typing, not just navigation
-		if (bracketMatchingEnabled) applyInlineBracketMatching(editorElement); // 🆕 post-highlight, so Prism can't wipe it
 	});
 
 	editorElement.addEventListener('scroll', () => {
