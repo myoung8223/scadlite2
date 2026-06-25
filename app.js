@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "257"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "255"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -198,10 +198,12 @@ if (editorElement) {
     });
     
 	editorElement.addEventListener('keyup', (e) => {
-        const navKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'];
-        if (bracketMatchingEnabled && navKeys.includes(e.key)) {
-            // ✨ FIX: Match the event queue timing
-            setTimeout(() => applyInlineBracketMatching(editorElement), 0);
+        const triggerKeys = [
+            'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown',
+            '(', ')', '{', '}', '[', ']'
+        ];
+        if (bracketMatchingEnabled && triggerKeys.includes(e.key)) {
+            applyInlineBracketMatching(editorElement);
         }
     });
 
@@ -366,11 +368,17 @@ function applyInlineBracketMatching(editorDiv) {
     const selection = window.getSelection();
     if (!selection.rangeCount) return;
     
-    // ✨ CRITICAL: We still need the raw text to search for brackets!
-    const textContent = editorDiv.textContent; 
+    const range = selection.getRangeAt(0);
+    const textContent = editorDiv.textContent;
+    let cursorIndex = 0;
+    const treeWalker = document.createTreeWalker(editorDiv, NodeFilter.SHOW_TEXT);
+    let currentNode = treeWalker.nextNode();
     
-    // ✨ Our robust offset calculator
-    const { start: cursorIndex } = getSelectionCharacterOffsetWithin(editorDiv);
+    while (currentNode) {
+        if (currentNode === range.startContainer) { cursorIndex += range.startOffset; break; }
+        cursorIndex += currentNode.textContent.length;
+        currentNode = treeWalker.nextNode();
+    }
 
     const partners = { '{': '}', '}': '{', '[': ']', ']': '[', '(': ')', ')': '(' };
     let targetIndex = cursorIndex;
@@ -430,57 +438,34 @@ function applyInlineBracketMatching(editorDiv) {
     let textNode = walker.nextNode();
 
 	while (textNode) {
-		// 1. Traverse and collect the target nodes FIRST
-	    let absoluteOffset = 0;
-	    let targetTextNode = null;
-	    let matchTextNode = null;
-	    
-	    const walker = document.createTreeWalker(editorDiv, NodeFilter.SHOW_TEXT);
-	    let textNode = walker.nextNode();
-	
-	    while (textNode) {
-	        const nodeLength = textNode.textContent.length;
-	        if (targetIndex >= absoluteOffset && targetIndex < absoluteOffset + nodeLength) {
-	            targetTextNode = textNode;
-	        }
-	        if (matchIndex !== -1 && matchIndex >= absoluteOffset && matchIndex < absoluteOffset + nodeLength) {
-	            matchTextNode = textNode;
-	        }
-	        absoluteOffset += nodeLength;
-	        textNode = walker.nextNode();
-	    }
-	
-	    // 2. Safely wrap them in spans AFTER the TreeWalker has finished traversing
-	    let targetSpanNode = targetTextNode ? targetTextNode.parentNode : null;
-	    let matchSpanNode = matchTextNode ? matchTextNode.parentNode : null;
-	
-	    if (targetSpanNode === editorDiv && targetTextNode) {
-	        const spanWrap = document.createElement('span');
-	        editorDiv.insertBefore(spanWrap, targetTextNode);
-	        spanWrap.appendChild(targetTextNode);
-	        targetSpanNode = spanWrap;
-	    }
-	    
-	    if (matchTextNode) {
-	        // Re-check parent in case both brackets were in the same raw text node!
-	        matchSpanNode = matchTextNode.parentNode;
-	        if (matchSpanNode === editorDiv) {
-	            const spanWrap = document.createElement('span');
-	            editorDiv.insertBefore(spanWrap, matchTextNode);
-	            spanWrap.appendChild(matchTextNode);
-	            matchSpanNode = spanWrap;
-	        }
-	    }
-	
-	    // 3. Apply the CSS classes
-	    if (targetSpanNode) {
-	        if (matchIndex !== -1 && matchSpanNode) {
-	            targetSpanNode.classList.add('bracket-match-glow');
-	            matchSpanNode.classList.add('bracket-match-glow');
-	        } else {
-	            targetSpanNode.classList.add('bracket-mismatch-glow');
-	        }
-	    }
+        const nodeLength = textNode.textContent.length;
+        
+        // 1. Check target node
+        if (targetIndex >= absoluteOffset && targetIndex < absoluteOffset + nodeLength) {
+            targetSpanNode = textNode.parentNode;
+            // FIX: Prevent highlighting the entire editor if the text is unwrapped
+            if (targetSpanNode === editorDiv) {
+                const spanWrap = document.createElement('span');
+                editorDiv.insertBefore(spanWrap, textNode);
+                spanWrap.appendChild(textNode);
+                targetSpanNode = spanWrap;
+            }
+        }
+        
+        // 2. Check matching partner node
+        if (matchIndex !== -1 && matchIndex >= absoluteOffset && matchIndex < absoluteOffset + nodeLength) {
+            matchSpanNode = textNode.parentNode;
+            // FIX: Prevent highlighting the entire editor if the text is unwrapped
+            if (matchSpanNode === editorDiv) {
+                const spanWrap = document.createElement('span');
+                editorDiv.insertBefore(spanWrap, textNode);
+                spanWrap.appendChild(textNode);
+                matchSpanNode = spanWrap;
+            }
+        }
+        
+        absoluteOffset += nodeLength;
+        textNode = walker.nextNode();
     }
 
     if (targetSpanNode) {
@@ -753,20 +738,15 @@ if (editorElement && lineNumbersDiv && toggleLinesBtn) {
     };
     triggerLineUpdate = updateLineNumbers;
 
-	jar.onUpdate((code) => {
-        rawEditorCode = code; 
+    jar.onUpdate((code) => {
+		rawEditorCode = code;  // keep in sync with editor changes
         if (editorElement.querySelectorAll('.editor-error-line-glow').length > 0 && lineNumbersDiv.innerHTML.includes('gutter-error-flare')) {
             editorElement.querySelectorAll('.editor-error-line-glow').forEach(el => el.classList.remove('editor-error-line-glow'));
         }
-        updateLineNumbers(code);
-        localStorage.setItem('openscad_editor_cache', code);
-        applyLineHighlight(); 
-        
-        // ✨ FIX: Push to the end of the event queue to survive CodeJar's micro-tasks
-        if (bracketMatchingEnabled) {
-            setTimeout(() => applyInlineBracketMatching(editorElement), 0);
-        }
-    });
+		updateLineNumbers(code);
+		localStorage.setItem('openscad_editor_cache', code);
+		applyLineHighlight(); // 🆕 highlight now follows typing, not just navigation
+	});
 
 	editorElement.addEventListener('scroll', () => {
 		lineNumbersDiv.scrollTop = editorElement.scrollTop;
