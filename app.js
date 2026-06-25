@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "256"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "257"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -198,11 +198,10 @@ if (editorElement) {
     });
     
 	editorElement.addEventListener('keyup', (e) => {
-        // ✨ ONLY navigation keys here. jar.onUpdate handles actual typing!
         const navKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'];
-        
         if (bracketMatchingEnabled && navKeys.includes(e.key)) {
-            applyInlineBracketMatching(editorElement);
+            // ✨ FIX: Match the event queue timing
+            setTimeout(() => applyInlineBracketMatching(editorElement), 0);
         }
     });
 
@@ -431,34 +430,57 @@ function applyInlineBracketMatching(editorDiv) {
     let textNode = walker.nextNode();
 
 	while (textNode) {
-        const nodeLength = textNode.textContent.length;
-        
-        // 1. Check target node
-        if (targetIndex >= absoluteOffset && targetIndex < absoluteOffset + nodeLength) {
-            targetSpanNode = textNode.parentNode;
-            // FIX: Prevent highlighting the entire editor if the text is unwrapped
-            if (targetSpanNode === editorDiv) {
-                const spanWrap = document.createElement('span');
-                editorDiv.insertBefore(spanWrap, textNode);
-                spanWrap.appendChild(textNode);
-                targetSpanNode = spanWrap;
-            }
-        }
-        
-        // 2. Check matching partner node
-        if (matchIndex !== -1 && matchIndex >= absoluteOffset && matchIndex < absoluteOffset + nodeLength) {
-            matchSpanNode = textNode.parentNode;
-            // FIX: Prevent highlighting the entire editor if the text is unwrapped
-            if (matchSpanNode === editorDiv) {
-                const spanWrap = document.createElement('span');
-                editorDiv.insertBefore(spanWrap, textNode);
-                spanWrap.appendChild(textNode);
-                matchSpanNode = spanWrap;
-            }
-        }
-        
-        absoluteOffset += nodeLength;
-        textNode = walker.nextNode();
+		// 1. Traverse and collect the target nodes FIRST
+	    let absoluteOffset = 0;
+	    let targetTextNode = null;
+	    let matchTextNode = null;
+	    
+	    const walker = document.createTreeWalker(editorDiv, NodeFilter.SHOW_TEXT);
+	    let textNode = walker.nextNode();
+	
+	    while (textNode) {
+	        const nodeLength = textNode.textContent.length;
+	        if (targetIndex >= absoluteOffset && targetIndex < absoluteOffset + nodeLength) {
+	            targetTextNode = textNode;
+	        }
+	        if (matchIndex !== -1 && matchIndex >= absoluteOffset && matchIndex < absoluteOffset + nodeLength) {
+	            matchTextNode = textNode;
+	        }
+	        absoluteOffset += nodeLength;
+	        textNode = walker.nextNode();
+	    }
+	
+	    // 2. Safely wrap them in spans AFTER the TreeWalker has finished traversing
+	    let targetSpanNode = targetTextNode ? targetTextNode.parentNode : null;
+	    let matchSpanNode = matchTextNode ? matchTextNode.parentNode : null;
+	
+	    if (targetSpanNode === editorDiv && targetTextNode) {
+	        const spanWrap = document.createElement('span');
+	        editorDiv.insertBefore(spanWrap, targetTextNode);
+	        spanWrap.appendChild(targetTextNode);
+	        targetSpanNode = spanWrap;
+	    }
+	    
+	    if (matchTextNode) {
+	        // Re-check parent in case both brackets were in the same raw text node!
+	        matchSpanNode = matchTextNode.parentNode;
+	        if (matchSpanNode === editorDiv) {
+	            const spanWrap = document.createElement('span');
+	            editorDiv.insertBefore(spanWrap, matchTextNode);
+	            spanWrap.appendChild(matchTextNode);
+	            matchSpanNode = spanWrap;
+	        }
+	    }
+	
+	    // 3. Apply the CSS classes
+	    if (targetSpanNode) {
+	        if (matchIndex !== -1 && matchSpanNode) {
+	            targetSpanNode.classList.add('bracket-match-glow');
+	            matchSpanNode.classList.add('bracket-match-glow');
+	        } else {
+	            targetSpanNode.classList.add('bracket-mismatch-glow');
+	        }
+	    }
     }
 
     if (targetSpanNode) {
@@ -740,9 +762,9 @@ if (editorElement && lineNumbersDiv && toggleLinesBtn) {
         localStorage.setItem('openscad_editor_cache', code);
         applyLineHighlight(); 
         
-        // ✨ Handles typing/pasting AFTER Prism finishes rendering
+        // ✨ FIX: Push to the end of the event queue to survive CodeJar's micro-tasks
         if (bracketMatchingEnabled) {
-            applyInlineBracketMatching(editorElement);
+            setTimeout(() => applyInlineBracketMatching(editorElement), 0);
         }
     });
 
