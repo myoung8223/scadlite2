@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "253"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "255"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -719,6 +719,11 @@ if (editorElement && lineNumbersDiv && toggleLinesBtn) {
 		updateLineNumbers(code);
 		localStorage.setItem('openscad_editor_cache', code);
 		applyLineHighlight(); // 🆕 highlight now follows typing, not just navigation
+
+		// 🆕 ADD THIS: Bracket matching follows typing safely here
+        if (bracketMatchingEnabled) {
+            applyInlineBracketMatching(editorElement);
+        }
 	});
 
 	editorElement.addEventListener('scroll', () => {
