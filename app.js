@@ -197,8 +197,12 @@ if (editorElement) {
         if (bracketMatchingEnabled) applyInlineBracketMatching(editorElement);
     });
     
-    editorElement.addEventListener('keyup', (e) => {
-        if (bracketMatchingEnabled && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'].includes(e.key)) {
+	editorElement.addEventListener('keyup', (e) => {
+        const triggerKeys = [
+            'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown',
+            '(', ')', '{', '}', '[', ']'
+        ];
+        if (bracketMatchingEnabled && triggerKeys.includes(e.key)) {
             applyInlineBracketMatching(editorElement);
         }
     });
@@ -719,11 +723,6 @@ if (editorElement && lineNumbersDiv && toggleLinesBtn) {
 		updateLineNumbers(code);
 		localStorage.setItem('openscad_editor_cache', code);
 		applyLineHighlight(); // 🆕 highlight now follows typing, not just navigation
-
-		// 🆕 ADD THIS: Bracket matching follows typing safely here
-        if (bracketMatchingEnabled) {
-            applyInlineBracketMatching(editorElement);
-        }
 	});
 
 	editorElement.addEventListener('scroll', () => {
