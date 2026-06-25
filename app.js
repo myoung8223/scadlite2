@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "253"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "254"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -449,6 +449,17 @@ function applyInlineBracketMatching(editorDiv) {
             targetSpanNode.classList.add('bracket-mismatch-glow');
         }
     }
+
+	// guard the class additions so they only ever land on real child spans, never on #editor itself
+	if (targetSpanNode && targetSpanNode !== editorDiv) {
+        if (matchIndex !== -1 && matchSpanNode && matchSpanNode !== editorDiv) {
+            targetSpanNode.classList.add('bracket-match-glow');
+            matchSpanNode.classList.add('bracket-match-glow');
+        } else {
+            targetSpanNode.classList.add('bracket-mismatch-glow');
+        }
+    }
+	
 }
 
 // ==========================================================================
@@ -713,12 +724,16 @@ if (editorElement && lineNumbersDiv && toggleLinesBtn) {
 
     jar.onUpdate((code) => {
 		rawEditorCode = code;  // keep in sync with editor changes
-        if (editorElement.querySelectorAll('.editor-error-line-glow').length > 0 && lineNumbersDiv.innerHTML.includes('gutter-error-flare')) {
-            editorElement.querySelectorAll('.editor-error-line-glow').forEach(el => el.classList.remove('editor-error-line-glow'));
-        }
-		updateLineNumbers(code);
-		localStorage.setItem('openscad_editor_cache', code);
+        //if (editorElement.querySelectorAll('.editor-error-line-glow').length > 0 && lineNumbersDiv.innerHTML.includes('gutter-error-flare')) {
+        //    editorElement.querySelectorAll('.editor-error-line-glow').forEach(el => el.classList.remove('editor-error-line-glow'));
+        //}
+		//updateLineNumbers(code);
+		//localStorage.setItem('openscad_editor_cache', code);
 		applyLineHighlight(); // 🆕 highlight now follows typing, not just navigation
+
+		// 🆕 bracket matching now follows typing — runs post-caret-restore,
+		// so the selection it reads is valid (unlike the old highlight-callback spot)
+		if (bracketMatchingEnabled) applyInlineBracketMatching(editorElement);		
 	});
 
 	editorElement.addEventListener('scroll', () => {
