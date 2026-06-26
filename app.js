@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "256"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "257"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -483,6 +483,128 @@ if (editorElement && typeof MutationObserver !== 'undefined') {
     });
     bracketGlowObserver.observe(editorElement, { childList: true, subtree: true });
 }
+
+// ==========================================================================
+// 🖱️ CUSTOM DRAG-SELECTION LAYER  (Chromium contenteditable selection fix)
+// CodeJar is a contenteditable whose innerHTML Prism rewrites. Chromium's
+// native drag-to-select extension snaps to line/element boundaries across that
+// kind of DOM (Firefox doesn't), producing runaway "swath" selections and
+// misplaced carets. We bypass the native extension entirely: preventDefault the
+// mousedown, then drive the selection ourselves from pixel hit-tests via
+// caretRangeFromPoint (Chromium/WebKit) / caretPositionFromPoint (Firefox).
+// Double/triple-click (word/line select) are left to the browser — they don't
+// trigger the bug. To remove this fix entirely, delete this whole block.
+// ==========================================================================
+(function installDragSelectionFix() {
+    if (!editorElement) return;
+
+    // Pixel → caret position, cross-browser.
+    function caretFromPoint(x, y) {
+        if (document.caretRangeFromPoint) {
+            const r = document.caretRangeFromPoint(x, y);
+            if (r) return { node: r.startContainer, offset: r.startOffset };
+        }
+        if (document.caretPositionFromPoint) {
+            const p = document.caretPositionFromPoint(x, y);
+            if (p) return { node: p.offsetNode, offset: p.offset };
+        }
+        return null;
+    }
+
+    // Clamp the hit-test point into the editor's CONTENT box (inside padding),
+    // so we never probe the padding/gutter dead zone where Chromium snaps to a
+    // line boundary. This is what fixes "click left of the first char jumps the
+    // caret" and "drag left selects everything."
+    function clampToEditor(x, y) {
+        const rect = editorElement.getBoundingClientRect();
+        const cs = getComputedStyle(editorElement);
+        const pl = parseFloat(cs.paddingLeft)   || 0;
+        const pr = parseFloat(cs.paddingRight)  || 0;
+        const pt = parseFloat(cs.paddingTop)    || 0;
+        const pb = parseFloat(cs.paddingBottom) || 0;
+        const left = rect.left + pl + 1, right = rect.right - pr - 1;
+        const top  = rect.top  + pt + 1, bottom = rect.bottom - pb - 1;
+        return {
+            x: Math.min(Math.max(x, left), Math.max(left, right)),
+            y: Math.min(Math.max(y, top),  Math.max(top, bottom))
+        };
+    }
+
+    let dragging = false;
+    let anchor = null;                 // {node, offset} — the mousedown caret
+    let lastMouse = { x: 0, y: 0 };
+
+    function applySelection(focusPt) {
+        if (!anchor || !focusPt) return;
+        const sel = window.getSelection();
+        try {
+            // setBaseAndExtent preserves direction, so typing replaces the whole
+            // selection and Shift+Arrow extends from the correct end.
+            sel.setBaseAndExtent(anchor.node, anchor.offset, focusPt.node, focusPt.offset);
+        } catch (e) { /* nodes can briefly go stale mid-rewrite; skip one frame */ }
+    }
+
+    // Auto-scroll when dragging near the top/bottom edge (native does this; we
+    // replace it). mousemove stops firing when the mouse is held still at the
+    // edge, so we loop on rAF while in the edge zone.
+    let scrollDir = 0, rafId = null;
+    function edgeScrollLoop() {
+        if (!dragging || scrollDir === 0) { rafId = null; return; }
+        editorElement.scrollTop += scrollDir * 12;
+        const c = clampToEditor(lastMouse.x, lastMouse.y);
+        applySelection(caretFromPoint(c.x, c.y));
+        rafId = requestAnimationFrame(edgeScrollLoop);
+    }
+    function updateEdgeScroll(y) {
+        const rect = editorElement.getBoundingClientRect();
+        const zone = 24;
+        scrollDir = y < rect.top + zone ? -1 : (y > rect.bottom - zone ? 1 : 0);
+        if (scrollDir !== 0 && rafId === null) rafId = requestAnimationFrame(edgeScrollLoop);
+    }
+
+    editorElement.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;        // primary button only
+        if (e.detail >= 2) return;         // leave double/triple-click to the browser
+        e.preventDefault();                // kill the native (buggy) selection path
+        editorElement.focus();             // default focus was prevented; do it manually
+
+        const c = clampToEditor(e.clientX, e.clientY);
+        const pt = caretFromPoint(c.x, c.y);
+        if (!pt) return;
+
+        if (e.shiftKey) {                  // Shift+click extends the existing selection
+            const sel = window.getSelection();
+            anchor = (sel.rangeCount && editorElement.contains(sel.anchorNode))
+                ? { node: sel.anchorNode, offset: sel.anchorOffset }
+                : pt;
+        } else {
+            anchor = pt;
+        }
+        dragging = true;
+        lastMouse = { x: e.clientX, y: e.clientY };
+        applySelection(pt);
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+        lastMouse = { x: e.clientX, y: e.clientY };
+        const c = clampToEditor(e.clientX, e.clientY);
+        applySelection(caretFromPoint(c.x, c.y));
+        updateEdgeScroll(e.clientY);
+    });
+
+    window.addEventListener('mouseup', (e) => {
+        if (!dragging) return;
+        dragging = false;
+        scrollDir = 0;
+        if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+        const c = clampToEditor(e.clientX, e.clientY);
+        applySelection(caretFromPoint(c.x, c.y));
+        // Selection is final — refresh decorations.
+        if (bracketMatchingEnabled) applyInlineBracketMatching(editorElement);
+        applyLineHighlight();
+    });
+})();
 
 // ==========================================================================
 // 🛠️ COMPILATION ERROR HIGHLIGHTING
