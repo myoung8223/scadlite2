@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "257"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "256"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -175,13 +175,10 @@ async function deletePersistentSvg(filename) {
     } catch (err) { console.error(err); }
 }
 
-let isDragSelecting = false;
-
 // 🍯 INITIALIZE CODEJAR INSTANCE
 const jar = CodeJar(
     editorElement, 
 	(el) => {
-		if (isDragSelecting) return;   // 🆕 don't rewrite DOM mid-drag — it kills the live selection
         rawEditorCode = el.textContent;  // capture raw BEFORE Prism
         if (typeof Prism !== 'undefined') {
             const code = el.textContent;
@@ -196,19 +193,6 @@ const jar = CodeJar(
 );
 
 if (editorElement) {
-    editorElement.addEventListener('mousedown', () => { isDragSelecting = true; });
-
-    // mouseup can land outside the editor if the drag exits it, so listen on window.
-    window.addEventListener('mouseup', () => {
-        if (!isDragSelecting) return;
-        isDragSelecting = false;
-        // Selection is final now — run the highlight we suppressed during the drag,
-        // preserving the user's selection across the DOM rewrite.
-        const { start, end } = getSelectionCharacterOffsetWithin(editorElement);
-        jar.updateCode(jar.toString());
-        setSelectionCharacterOffsetWithin(editorElement, start, end);
-    });
-	
     editorElement.addEventListener('click', () => {
         if (bracketMatchingEnabled) applyInlineBracketMatching(editorElement);
     });
