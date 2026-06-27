@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "273"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "274"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -248,22 +248,35 @@ if (toggleDebugBtn) {
 }
 
 // ==========================================================================
-// 💡 BRACKET MATCHING TOGGLE
+// 💡 BRACKET MATCHING TOGGLE (CM6 — repointed to bundle's toggleBracketMatching)
 // ==========================================================================
 const toggleBracketBtn = document.getElementById('btn-toggle-bracket');
 if (toggleBracketBtn) {
     const applyBracketLayout = (enabled) => {
         bracketMatchingEnabled = enabled;
+        if (cmView) window.scadCM.toggleBracketMatching(cmView, enabled);
         localStorage.setItem('openscad_bracket_matching', enabled ? 'enabled' : 'disabled');
         toggleBracketBtn.textContent = enabled ? 'Enabled' : 'Disabled';
         toggleBracketBtn.style.backgroundColor = enabled ? '#28a745' : '#dc3545';
-        if (!enabled && editorElement) {
-            editorElement.querySelectorAll('.bracket-match-glow, .bracket-mismatch-glow')
-                .forEach(span => span.classList.remove('bracket-match-glow', 'bracket-mismatch-glow'));
-        }
     };
     applyBracketLayout(bracketMatchingEnabled);
     toggleBracketBtn.addEventListener('click', () => applyBracketLayout(!bracketMatchingEnabled));
+}
+
+// ==========================================================================
+// ✏️ LINE HIGHLIGHT TOGGLE (CM6 — repointed to bundle's toggleActiveLine)
+// ==========================================================================
+const toggleLineHighlightBtn = document.getElementById('btn-toggle-line-highlight');
+if (toggleLineHighlightBtn) {
+    const applyLineHighlightLayout = (enabled) => {
+        lineHighlightingEnabled = enabled;
+        if (cmView) window.scadCM.toggleActiveLine(cmView, enabled);
+        localStorage.setItem('openscad_line_highlight', enabled ? 'enabled' : 'disabled');
+        toggleLineHighlightBtn.textContent = enabled ? 'Enabled' : 'Disabled';
+        toggleLineHighlightBtn.style.backgroundColor = enabled ? '#28a745' : '#dc3545';
+    };
+    applyLineHighlightLayout(lineHighlightingEnabled);
+    toggleLineHighlightBtn.addEventListener('click', () => applyLineHighlightLayout(!lineHighlightingEnabled));
 }
 
 // ==========================================================================
