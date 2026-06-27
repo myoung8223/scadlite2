@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "268"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "269"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -219,83 +219,6 @@ const jar = (() => {
         onUpdate() {}
     };
 })();
-
-// ==========================================================================
-// 📐 SMART MULTI-LINE BLOCK INDENTATION ENGINE
-// ==========================================================================
-if (editorElement) {
-    editorElement.addEventListener('keydown', (event) => {
-		
-		if (false && event.key === 'Tab') {
-            event.preventDefault();
-            event.stopImmediatePropagation();
-
-            const INDENT_UNIT = '  ';        // <-- two spaces. Change to '\t' or '    ' to taste.
-            const U = INDENT_UNIT.length;
-
-            const state = cmView.state;
-            const sel = state.selection.main;
-            const value = state.doc.toString();
-            const start = sel.from, end = sel.to;
-            const selectedText = value.substring(start, end);
-            const isMultiLineSelection = selectedText.includes('\n');
-
-            // Single caret / single-line, plain Tab: insert one indent unit.
-            if (!isMultiLineSelection && !event.shiftKey) {
-                cmView.dispatch({
-                    changes: { from: start, to: end, insert: INDENT_UNIT },
-                    selection: { anchor: start + U }
-                });
-                return;
-            }
-
-            // Multi-line (or Shift+Tab): operate on whole lines.
-            let adjustedEnd = end;
-            if (adjustedEnd > start && value[adjustedEnd - 1] === '\n') adjustedEnd--;
-
-            const blockStart = value.lastIndexOf('\n', start - 1) + 1;
-            const lineEnd = value.indexOf('\n', adjustedEnd);
-            const blockEnd = lineEnd === -1 ? value.length : lineEnd;
-            const targetBlock = value.substring(blockStart, blockEnd);
-
-            let modifiedBlock, newStart, newEnd;
-
-            if (!event.shiftKey) {
-                // Indent: prepend one unit to every line.
-                modifiedBlock = targetBlock.split('\n').map(line => INDENT_UNIT + line).join('\n');
-                const linesBeforeStart = value.substring(blockStart, start).split('\n').length - 1;
-                const linesBeforeEnd   = value.substring(blockStart, end).split('\n').length - 1;
-                newStart = start + (linesBeforeStart + 1) * U;
-                newEnd   = end + (linesBeforeEnd + 1) * U;
-            } else {
-                // Outdent: remove one leading tab, or up to U leading spaces, per line.
-                let removedBeforeStart = 0, removedBeforeEnd = 0, posInBlock = 0;
-                modifiedBlock = targetBlock.split('\n').map(line => {
-                    let reduction = 0, newLine = line;
-                    if (line.startsWith('\t')) { reduction = 1; newLine = line.substring(1); }
-                    else if (line.match(/^ +/)) {
-                        const spaces = line.match(/^ +/)[0].length;
-                        reduction = Math.min(spaces, U);
-                        newLine = line.substring(reduction);
-                    }
-                    const absoluteLineStart = blockStart + posInBlock;
-                    if (start > absoluteLineStart) removedBeforeStart += Math.min(reduction, start - absoluteLineStart);
-                    if (end > absoluteLineStart)   removedBeforeEnd   += Math.min(reduction, end - absoluteLineStart);
-                    posInBlock += line.length + 1;
-                    return newLine;
-                }).join('\n');
-                newStart = Math.max(blockStart, start - removedBeforeStart);
-                newEnd   = Math.max(blockStart, end - removedBeforeEnd);
-            }
-
-            cmView.dispatch({
-                changes: { from: blockStart, to: blockEnd, insert: modifiedBlock },
-                selection: { anchor: newStart, head: newEnd }
-            });
-            return;
-        }
-    }, true);
-}
 
 function getSelectionCharacterOffsetWithin(element) {
     let start = 0, end = 0;
