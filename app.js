@@ -2,7 +2,7 @@
 const BUILD_NUMBER = "274"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
-import { CodeJar } from './libs/codejar.min.js';
+//import { CodeJar } from './libs/codejar.min.js';
 import OpenSCAD from './libs/openscad.js';
 
 // Dom Elements
