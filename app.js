@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "257"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "258"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -498,17 +498,25 @@ if (editorElement && typeof MutationObserver !== 'undefined') {
 (function installDragSelectionFix() {
     if (!editorElement) return;
 
-    // Pixel → caret position, cross-browser.
-    function caretFromPoint(x, y) {
+	// Pixel → ABSOLUTE character offset within the editor.
+    // caretRangeFromPoint returns node-LOCAL offsets (each Prism span has its own
+    // text node — confirmed via DevTools: offsets reset 7,8,9,0,1,2 across spans),
+    // so we convert to a single document offset by measuring a range from the
+    // editor start to the hit point. This is the actual fix.
+    function absOffsetFromPoint(x, y) {
+        let hit = null;
         if (document.caretRangeFromPoint) {
             const r = document.caretRangeFromPoint(x, y);
-            if (r) return { node: r.startContainer, offset: r.startOffset };
-        }
-        if (document.caretPositionFromPoint) {
+            if (r) hit = { node: r.startContainer, offset: r.startOffset };
+        } else if (document.caretPositionFromPoint) {
             const p = document.caretPositionFromPoint(x, y);
-            if (p) return { node: p.offsetNode, offset: p.offset };
+            if (p) hit = { node: p.offsetNode, offset: p.offset };
         }
-        return null;
+        if (!hit || !editorElement.contains(hit.node)) return null;
+        const measure = document.createRange();
+        measure.selectNodeContents(editorElement);
+        try { measure.setEnd(hit.node, hit.offset); } catch (e) { return null; }
+        return measure.toString().length;
     }
 
     // Clamp the hit-test point into the editor's CONTENT box (inside padding),
@@ -531,17 +539,17 @@ if (editorElement && typeof MutationObserver !== 'undefined') {
     }
 
     let dragging = false;
-    let anchor = null;                 // {node, offset} — the mousedown caret
+    let anchorAbs = null;              // mousedown caret as an ABSOLUTE offset
     let lastMouse = { x: 0, y: 0 };
 
-    function applySelection(focusPt) {
-        if (!anchor || !focusPt) return;
-        const sel = window.getSelection();
-        try {
-            // setBaseAndExtent preserves direction, so typing replaces the whole
-            // selection and Shift+Arrow extends from the correct end.
-            sel.setBaseAndExtent(anchor.node, anchor.offset, focusPt.node, focusPt.offset);
-        } catch (e) { /* nodes can briefly go stale mid-rewrite; skip one frame */ }
+	function applySelection(focusAbs) {
+        if (anchorAbs == null || focusAbs == null) return;
+        const start = Math.min(anchorAbs, focusAbs);
+        const end   = Math.max(anchorAbs, focusAbs);
+        // Reuse the proven absolute-offset → node/offset resolver. It walks all
+        // text nodes from the editor root, so spans and blank-line gaps are
+        // handled uniformly — no setBaseAndExtent, no node-local offsets.
+        setSelectionCharacterOffsetWithin(editorElement, start, end);
     }
 
     // Auto-scroll when dragging near the top/bottom edge (native does this; we
@@ -552,7 +560,7 @@ if (editorElement && typeof MutationObserver !== 'undefined') {
         if (!dragging || scrollDir === 0) { rafId = null; return; }
         editorElement.scrollTop += scrollDir * 12;
         const c = clampToEditor(lastMouse.x, lastMouse.y);
-        applySelection(caretFromPoint(c.x, c.y));
+        applySelection(absOffsetFromPoint(c.x, c.y));
         rafId = requestAnimationFrame(edgeScrollLoop);
     }
     function updateEdgeScroll(y) {
@@ -568,28 +576,26 @@ if (editorElement && typeof MutationObserver !== 'undefined') {
         e.preventDefault();                // kill the native (buggy) selection path
         editorElement.focus();             // default focus was prevented; do it manually
 
-        const c = clampToEditor(e.clientX, e.clientY);
-        const pt = caretFromPoint(c.x, c.y);
-        if (!pt) return;
+		const c = clampToEditor(e.clientX, e.clientY);
+        const downAbs = absOffsetFromPoint(c.x, c.y);
+        if (downAbs == null) return;
 
-        if (e.shiftKey) {                  // Shift+click extends the existing selection
-            const sel = window.getSelection();
-            anchor = (sel.rangeCount && editorElement.contains(sel.anchorNode))
-                ? { node: sel.anchorNode, offset: sel.anchorOffset }
-                : pt;
+        if (e.shiftKey) {                  // Shift+click extends existing selection
+            const cur = getSelectionCharacterOffsetWithin(editorElement);
+            anchorAbs = cur.start;
         } else {
-            anchor = pt;
+            anchorAbs = downAbs;
         }
         dragging = true;
         lastMouse = { x: e.clientX, y: e.clientY };
-        applySelection(pt);
+        applySelection(downAbs);
     });
 
     window.addEventListener('mousemove', (e) => {
         if (!dragging) return;
         lastMouse = { x: e.clientX, y: e.clientY };
         const c = clampToEditor(e.clientX, e.clientY);
-        applySelection(caretFromPoint(c.x, c.y));
+        applySelection(absOffsetFromPoint(c.x, c.y));
         updateEdgeScroll(e.clientY);
     });
 
