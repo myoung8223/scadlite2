@@ -17,14 +17,11 @@
     <script src="libs/3MFLoader.js"></script>
     <script src="libs/OrbitControls.js"></script>
     <script src="libs/STLExporter.js"></script>
-    <link rel="stylesheet" href="libs/prism-tomorrow.min.css">
     <script type="module" src="app.js"></script>
     
 <style>
         .editor-error-line-glow { background-color: rgba(220, 53, 69, 0.25) !important; border-bottom: 1px dashed #ff4444; }
         .gutter-error-flare { background-color: #dc3545 !important; color: #ffffff !important; padding: 2px 6px !important; border-radius: 3px; font-weight: bold; }
-        .bracket-match-glow { background-color: rgba(0, 122, 204, 0.45) !important; color: #00ffffff !important; font-weight: bold !important; border-bottom: 2px solid #00c3ff; }
-        .bracket-mismatch-glow { background-color: rgba(220, 53, 69, 0.4) !important; color: #ff8888 !important; font-weight: bold !important; border-bottom: 2px solid #ff3344; }
         
         * { box-sizing: border-box; }
         body, html { margin: 0; padding: 0; height: 100%; font-family: sans-serif; background: #222; color: #fff; overflow: hidden; }
@@ -45,10 +42,10 @@
         .file-btn:hover { background: #555; }
         
         .editor-wrapper { flex: 1 1 0; min-height: 0; display: flex; background: #1e1e1e; overflow: hidden; position: relative; }
-        #line-numbers { width: 55px; background: #1a1a1a; color: #5a5a5a; text-align: right; padding: 15px 8px 15px 0; font-family: 'Consolas', 'Monaco', 'Courier New', Courier, monospace; font-size: 14px; line-height: 1.5; user-select: none; overflow: hidden; border-right: 1px solid #2d2d2d; flex-shrink: 0; }
         
-        #editor { flex-grow: 1; height: 100%; background: #1e1e1e; position: relative; overflow: auto; outline: none; padding: 15px !important; font-family: 'Consolas', 'Monaco', 'Courier New', Courier, monospace !important; line-height: 1.5; tab-size: 4; -moz-tab-size: 4; white-space: pre !important; word-break: normal !important; overflow-wrap: normal !important; }
-        #editor *, .codejar-editor, .codejar-editor * { font-family: 'Consolas', 'Monaco', 'Courier New', Courier, monospace !important; line-height: 1.5 !important; }
+        #editor { flex-grow: 1; height: 100%; min-width: 0; overflow: hidden; background: #1e1e1e; }
+        #editor .cm-editor { height: 100%; }
+        #editor .cm-scroller { overflow: auto; }
         
         .console-box { height: 150px; min-height: 60px; max-height: 80%; background: #000; border-top: 2px solid #444; font-family: monospace; font-size: 13px; color: #0f0; padding: 10px; overflow-y: auto; white-space: pre-wrap; flex-shrink: 0; }
         
@@ -168,8 +165,7 @@
             </div>
             
             <div class="editor-wrapper">
-                <div id="line-numbers">1</div>
-                <div id="editor" class="language-scad" spellcheck="false"></div>
+                <div id="editor" spellcheck="false"></div>
             </div>
 
             <div class="console-gutter" id="console-gutter"></div>
@@ -486,6 +482,5 @@ with Extensive AI Assistance from Google Gemini & Claude</div>
         </div>
     </div>
 
-    <script src="libs/prism.min.js"></script>
 </body>
 </html>
