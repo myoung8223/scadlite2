@@ -682,7 +682,7 @@ linear_extrude(height = 4) {   // 3D text
 
 translate([-100, 10, 0])
 rotate([0, 0, 270]) {
-	%cube(20);          // demo transparency modifier, %
+	%cube(20);            // demo transparency modifier, %
 	cube(10);
 }
 
@@ -709,7 +709,7 @@ cylinder(d1=25, d2=0, h=30);   // conic cylinder
 
 color([0.8, 0.8, 0.4, 1])
 translate([88, 0, 0])	
-difference() {                      // conic cylinder cup
+difference() {                    // conic cylinder cup
 	cylinder(d1=15, d2=20, h=20);
 	translate([0, 0, 0.5])
 	cylinder(d1=14, d2=17, h=20);
@@ -717,7 +717,7 @@ difference() {                      // conic cylinder cup
 
 color([0.8, 0.8, 0.8, 1])
 translate([50, -40, 0])
-hull() {                                   // hull example (D6 die)
+hull() {                                 // hull example (D6 die)
 	translate([-8, -8, -8]) sphere(d=4);
 	translate([8, -8, -8]) sphere(d=4);
 	translate([-8, 8, -8]) sphere(d=4);
