@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "259"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "260"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -263,7 +263,7 @@ if (editorElement) {
             editorElement.dispatchEvent(fakeRedoEvent);
         }
 
-		if (event.key === 'Delete') {
+		if (false && event.key === 'Delete') {
             if (event.ctrlKey || event.metaKey) return; // let Ctrl+Del pass through
             event.preventDefault();
             event.stopImmediatePropagation();
@@ -283,7 +283,7 @@ if (editorElement) {
 // ==========================================================================
 if (editorElement) {
     editorElement.addEventListener('keydown', (event) => {
-        if (event.key === 'Tab') {
+        if (false && event.key === 'Tab') {
             event.preventDefault();
             event.stopImmediatePropagation();
 
