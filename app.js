@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "269"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "270"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -219,59 +219,6 @@ const jar = (() => {
         onUpdate() {}
     };
 })();
-
-function getSelectionCharacterOffsetWithin(element) {
-    let start = 0, end = 0;
-    const sel = window.getSelection();
-    if (sel.rangeCount > 0) {
-        const range = sel.getRangeAt(0);
-        const preCaretRange = range.cloneRange();
-        preCaretRange.selectNodeContents(element);
-        
-        if (element.contains(range.startContainer)) {
-            preCaretRange.setEnd(range.startContainer, range.startOffset);
-            start = preCaretRange.toString().length;
-        }
-        if (element.contains(range.endContainer)) {
-            preCaretRange.setEnd(range.endContainer, range.endOffset);
-            end = preCaretRange.toString().length;
-        }
-        if (start > end) { const temp = start; start = end; end = temp; }
-    }
-    return { start, end };
-}
-
-function setSelectionCharacterOffsetWithin(element, start, end) {
-    if (start < 0) start = 0;
-    if (end < 0) end = 0;
-    const sel = window.getSelection();
-    const range = document.createRange();
-    range.setStart(element, 0);
-    range.collapse(true);
-    
-    let currentOffset = 0;
-    const treeWalker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-    let currentNode = treeWalker.nextNode();
-    let startNode = null, startOffset = 0, endNode = null, endOffset = 0;
-    
-    while (currentNode) {
-        const nodeLength = currentNode.textContent.length;
-        if (!startNode && currentOffset + nodeLength >= start) { startNode = currentNode; startOffset = start - currentOffset; }
-        if (!endNode && currentOffset + nodeLength >= end) { endNode = currentNode; endOffset = end - currentOffset; break; }
-        currentOffset += nodeLength;
-        currentNode = treeWalker.nextNode();
-    }
-    
-    if (!startNode) { startNode = element; startOffset = element.childNodes.length; }
-    if (!endNode) { endNode = element; endOffset = element.childNodes.length; }
-    
-    try {
-        range.setStart(startNode, startOffset);
-        range.setEnd(endNode, endOffset);
-        sel.removeAllRanges();
-        sel.addRange(range);
-    } catch (e) { console.error("Selection recovery matrix failure:", e); }
-}
 
 // ==========================================================================
 // 💡 BI-DIRECTIONAL BRACKET MATCHING
