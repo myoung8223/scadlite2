@@ -1,8 +1,6 @@
 // ---- BUILD VERSION CONTROLLER ----
 const BUILD_NUMBER = "274"; // <-- Incremented for SVG Import Database & Grid Layout
 
-// 🍯 Import standalone, offline-ready CodeJar framework
-//import { CodeJar } from './libs/codejar.min.js';
 import OpenSCAD from './libs/openscad.js';
 
 // Dom Elements
@@ -174,25 +172,6 @@ async function deletePersistentSvg(filename) {
         });
     } catch (err) { console.error(err); }
 }
-
-/*
-// 🍯 INITIALIZE CODEJAR INSTANCE
-const jar = CodeJar(
-    editorElement, 
-	(el) => {
-        rawEditorCode = el.textContent;  // capture raw BEFORE Prism
-        if (typeof Prism !== 'undefined') {
-            const code = el.textContent;
-            const grammar = Prism.languages.openscad || Prism.languages.clike || Prism.languages.javascript;
-            const langName = Prism.languages.openscad ? 'openscad' : (Prism.languages.clike ? 'clike' : 'javascript');
-            if (grammar) el.innerHTML = Prism.highlight(code, grammar, langName);
-            else Prism.highlightElement(el); 
-        }
-        //try { applyInlineBracketMatching(el); } catch (e) { console.error("Bracket match error:", e); }   // seeing is removing this addresses odd cursor movement in the editor
-    },
-    { tab: '\t', history: true, indentOn: /[(\[{]$/, addClosing: false } 
-);
-*/
 
 // 🍯 INITIALIZE CODEMIRROR 6 (custom SCADLite bundle — window.scadCM)
 let cmView = null;
@@ -1703,6 +1682,20 @@ Please see the "GNU GENERAL PUBLIC LICENSE (VERSION 2)" section at the
 bottom of this document for the full licensing terms and conditions.
 
 ===========================================================================
+                         CodeMirror (MIT License)
+===========================================================================
+<a href="https://codemirror.net/" target="_blank" style="color: #52b1ff; text-decoration: underline; font-weight: bold;">https://codemirror.net/</a>
+
+Copyright (c) by Marijn Haverbeke and others
+
+CodeMirror is a code editor component for the web. SCADLite bundles the
+@codemirror/* packages (view, state, commands, language, search,
+autocomplete, lint) and @lezer/highlight into a single editor module.
+
+Please see the "MIT LICENSE" section at the 
+bottom of this document for the full licensing terms and conditions.
+
+===========================================================================
                            fflate (MIT License)
 ===========================================================================
 <a href="https://github.com/101arrowz/fflate" target="_blank" style="color: #52b1ff; text-decoration: underline; font-weight: bold;">https://github.com/101arrowz/fflate</a>
@@ -1718,26 +1711,6 @@ bottom of this document for the full licensing terms and conditions.
 <a href="https://github.com/mrdoob/three.js" target="_blank" style="color: #52b1ff; text-decoration: underline; font-weight: bold;">https://github.com/mrdoob/three.js</a>
 
 Copyright © 2010-2026 three.js authors
-
-Please see the "MIT LICENSE" section at the 
-bottom of this document for the full licensing terms and conditions.
-
-===========================================================================
-                           CodeJar (MIT License)
-===========================================================================
-<a href="https://github.com/antonmedv/codejar" target="_blank" style="color: #52b1ff; text-decoration: underline; font-weight: bold;">https://github.com/antonmedv/codejar</a>
-
-Copyright (c) 2020 Anton Medvedev
-
-Please see the "MIT LICENSE" section at the 
-bottom of this document for the full licensing terms and conditions.
-
-===========================================================================
-                            prism (MIT License)
-===========================================================================
-<a href="https://github.com/PrismJS/prism" target="_blank" style="color: #52b1ff; text-decoration: underline; font-weight: bold;">https://github.com/PrismJS/prism</a>
-
-Copyright (c) 2012 Lea Verou
 
 Please see the "MIT LICENSE" section at the 
 bottom of this document for the full licensing terms and conditions.
@@ -2191,7 +2164,7 @@ Public License instead of this License.
 ===========================================================================
                                 MIT LICENSE
 ===========================================================================
-Applies to: CodeJar, Three.js, Prism.js, fflate
+Applies to: CodeMirror, Three.js, fflate
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
