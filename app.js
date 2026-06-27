@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "272"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "273"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -291,47 +291,20 @@ if (consoleBox && toggleConsoleBtn) {
 }
 
 // ==========================================================================
-// 🔣 LINE NUMBERS TOGGLE
+// 🔣 LINE NUMBERS TOGGLE (CM6 — repointed to bundle's toggleLineNumbers)
 // ==========================================================================
 const toggleLinesBtn = document.getElementById('btn-toggle-lines');
-const lineNumbersDiv = document.getElementById('line-numbers');
-let triggerLineUpdate = null;
+let triggerLineUpdate = null;   // retained as null; legacy typeof-guarded call sites safely no-op
 
-if (editorElement && lineNumbersDiv && toggleLinesBtn) {
-    const updateLineNumbers = (codeText) => {
-        let currentCode = (typeof codeText === 'string') ? codeText : jar.toString();
-        if (currentCode.endsWith('\n')) currentCode = currentCode.slice(0, -1);
-        lineNumbersDiv.innerHTML = Array.from({ length: currentCode.split('\n').length }, (_, i) => i + 1).join('<br>');
-    };
-    triggerLineUpdate = updateLineNumbers;
-
-    jar.onUpdate((code) => {
-		rawEditorCode = code;  // keep in sync with editor changes
-        if (editorElement.querySelectorAll('.editor-error-line-glow').length > 0 && lineNumbersDiv.innerHTML.includes('gutter-error-flare')) {
-            editorElement.querySelectorAll('.editor-error-line-glow').forEach(el => el.classList.remove('editor-error-line-glow'));
-        }
-		updateLineNumbers(code);
-		localStorage.setItem('openscad_editor_cache', code);
-	});
-
-	editorElement.addEventListener('scroll', () => {
-		lineNumbersDiv.scrollTop = editorElement.scrollTop;
-	});
-
+if (toggleLinesBtn) {
     let isLinesEnabled = localStorage.getItem('openscad_lines_visible') !== 'disabled';
     const applyLinesLayout = (enabled) => {
-        if (enabled) {
-            lineNumbersDiv.style.display = 'block'; toggleLinesBtn.textContent = 'Enabled';
-            toggleLinesBtn.style.backgroundColor = '#28a745'; isLinesEnabled = true;
-            localStorage.setItem('openscad_lines_visible', 'enabled'); updateLineNumbers();
-            lineNumbersDiv.scrollTop = editorElement.scrollTop;
-        } else {
-            lineNumbersDiv.style.display = 'none'; toggleLinesBtn.textContent = 'Disabled';
-            toggleLinesBtn.style.backgroundColor = '#dc3545'; isLinesEnabled = false;
-            localStorage.setItem('openscad_lines_visible', 'disabled');
-        }
+        if (cmView) window.scadCM.toggleLineNumbers(cmView, enabled);
+        toggleLinesBtn.textContent = enabled ? 'Enabled' : 'Disabled';
+        toggleLinesBtn.style.backgroundColor = enabled ? '#28a745' : '#dc3545';
+        localStorage.setItem('openscad_lines_visible', enabled ? 'enabled' : 'disabled');
+        isLinesEnabled = enabled;
     };
-    updateLineNumbers();
     applyLinesLayout(isLinesEnabled);
     toggleLinesBtn.addEventListener('click', () => applyLinesLayout(!isLinesEnabled));
 }
@@ -361,17 +334,13 @@ updateWindowTitle();
 const savedFontSizeStr = localStorage.getItem('openscad_editor_font_size') || '14px';
 if (editorElement && editorFontSizeSelect) {
     editorElement.style.fontSize = savedFontSizeStr;
-    if (lineNumbersDiv) lineNumbersDiv.style.fontSize = savedFontSizeStr; 
     editorFontSizeSelect.value = savedFontSizeStr;
 
     // 🔧 RESTORED: Font Size Changer Listener
     editorFontSizeSelect.addEventListener('change', (event) => {
         const newSize = event.target.value;
         editorElement.style.fontSize = newSize;
-        if (lineNumbersDiv) lineNumbersDiv.style.fontSize = newSize;
         localStorage.setItem('openscad_editor_font_size', newSize);
-        if (typeof triggerLineUpdate === 'function') triggerLineUpdate();
-		if (typeof triggerLineUpdate === 'function') triggerLineUpdate();
     });
 }
 
