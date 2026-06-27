@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "264"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "265"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -263,7 +263,7 @@ if (editorElement) {
 if (editorElement) {
     editorElement.addEventListener('keydown', (event) => {
 		
-		if (event.key === 'Tab') {
+		if (false && event.key === 'Tab') {
             event.preventDefault();
             event.stopImmediatePropagation();
 
