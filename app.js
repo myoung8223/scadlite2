@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "263"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "264"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -194,16 +194,17 @@ const jar = CodeJar(
 );
 */
 
-// 🍯 INITIALIZE CODEMIRROR 6 (Stage 1 — replaces CodeJar; CodeJar/Prism removed in a later cleanup stage once proven)
-// paul-norman cpp bundle: exposes a global `cm6` instance with newEditor/newState/
-// newView/fromElement/textarea. cpp mode + line numbers + bracket matching +
-// active-line + close-brackets + Tab-indent + dark theme are all pre-baked.
-// We mount into #editor and expose a `jar`-shaped shim so Preview/Render/Save/
-// file-load (which call jar.toString()/jar.updateCode()) keep working unchanged.
+// 🍯 INITIALIZE CODEMIRROR 6 (custom SCADLite bundle — window.scadCM)
 let cmView = null;
 const jar = (() => {
-    const CM = cm6.load();
-    cmView = CM.newEditor(editorElement, "", { dark: true });
+    cmView = window.scadCM.newEditor(editorElement, "", {
+        // onChange fires on every doc change, AFTER CM6 commits it — so
+        // rawEditorCode is always current (no rAF needed anymore).
+        onChange: (view) => {
+            rawEditorCode = view.state.doc.toString();
+            localStorage.setItem('openscad_editor_cache', rawEditorCode);
+        }
+    });
 
     return {
         toString() {
@@ -215,31 +216,9 @@ const jar = (() => {
             });
             rawEditorCode = code;
         },
-        // No-op stubs so stray CodeJar API calls (e.g. jar.onUpdate) don't throw in Stage 1.
         onUpdate() {}
     };
 })();
-
-/*
-// Keep rawEditorCode + the localStorage cache live as the user types.
-// (Stage 1 uses a DOM input listener; a later stage can switch to CM6's own
-// update listener for precision.)
-editorElement.addEventListener('input', () => {
-    rawEditorCode = jar.toString();
-    localStorage.setItem('openscad_editor_cache', rawEditorCode);
-});
-*/
-
-// Keep rawEditorCode + the localStorage cache live as the user types.
-// CM6 commits each keystroke to its document AFTER the native `input` event
-// fires, so reading synchronously lags by one character (dropping the last
-// char typed). Defer to the next frame, when state.doc is current.
-editorElement.addEventListener('input', () => {
-    requestAnimationFrame(() => {
-        rawEditorCode = jar.toString();
-        localStorage.setItem('openscad_editor_cache', rawEditorCode);
-    });
-});
 
 if (editorElement) {
     editorElement.addEventListener('click', () => {
