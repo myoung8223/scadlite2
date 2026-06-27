@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "262"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "263"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -284,9 +284,12 @@ if (editorElement) {
 if (editorElement) {
     editorElement.addEventListener('keydown', (event) => {
 		
-	if (event.key === 'Tab') {
+		if (event.key === 'Tab') {
             event.preventDefault();
             event.stopImmediatePropagation();
+
+            const INDENT_UNIT = '  ';        // <-- two spaces. Change to '\t' or '    ' to taste.
+            const U = INDENT_UNIT.length;
 
             const state = cmView.state;
             const sel = state.selection.main;
@@ -295,11 +298,11 @@ if (editorElement) {
             const selectedText = value.substring(start, end);
             const isMultiLineSelection = selectedText.includes('\n');
 
-            // Single caret (or single-line selection), plain Tab: just insert a tab.
+            // Single caret / single-line, plain Tab: insert one indent unit.
             if (!isMultiLineSelection && !event.shiftKey) {
                 cmView.dispatch({
-                    changes: { from: start, to: end, insert: '\t' },
-                    selection: { anchor: start + 1 }
+                    changes: { from: start, to: end, insert: INDENT_UNIT },
+                    selection: { anchor: start + U }
                 });
                 return;
             }
@@ -316,22 +319,21 @@ if (editorElement) {
             let modifiedBlock, newStart, newEnd;
 
             if (!event.shiftKey) {
-                // Indent: add a tab to the start of every line in the block.
-                modifiedBlock = targetBlock.split('\n').map(line => '\t' + line).join('\n');
+                // Indent: prepend one unit to every line.
+                modifiedBlock = targetBlock.split('\n').map(line => INDENT_UNIT + line).join('\n');
                 const linesBeforeStart = value.substring(blockStart, start).split('\n').length - 1;
                 const linesBeforeEnd   = value.substring(blockStart, end).split('\n').length - 1;
-                newStart = start + linesBeforeStart + 1;
-                newEnd   = end + linesBeforeEnd + 1;
+                newStart = start + (linesBeforeStart + 1) * U;
+                newEnd   = end + (linesBeforeEnd + 1) * U;
             } else {
-                // Outdent: remove up to one tab / four leading spaces per line.
+                // Outdent: remove one leading tab, or up to U leading spaces, per line.
                 let removedBeforeStart = 0, removedBeforeEnd = 0, posInBlock = 0;
                 modifiedBlock = targetBlock.split('\n').map(line => {
                     let reduction = 0, newLine = line;
                     if (line.startsWith('\t')) { reduction = 1; newLine = line.substring(1); }
-                    else if (line.startsWith('    ')) { reduction = 4; newLine = line.substring(4); }
                     else if (line.match(/^ +/)) {
                         const spaces = line.match(/^ +/)[0].length;
-                        reduction = Math.min(spaces, 4);
+                        reduction = Math.min(spaces, U);
                         newLine = line.substring(reduction);
                     }
                     const absoluteLineStart = blockStart + posInBlock;
