@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "257"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "258"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -202,8 +202,8 @@ const jar = CodeJar(
 // file-load (which call jar.toString()/jar.updateCode()) keep working unchanged.
 let cmView = null;
 const jar = (() => {
-    // newEditor(element, content, options) builds state+view and returns the view.
-    cmView = cm6.newEditor(editorElement, "", { dark: true });
+    const CM = cm6.load();
+    cmView = CM.newEditor(editorElement, "", { dark: true });
 
     return {
         toString() {
