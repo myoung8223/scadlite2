@@ -605,7 +605,7 @@ if (editorElement && typeof MutationObserver !== 'undefined') {
         scrollDir = 0;
         if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
         const c = clampToEditor(e.clientX, e.clientY);
-        applySelection(caretFromPoint(c.x, c.y));
+        applySelection(absOffsetFromPoint(c.x, c.y));
         // Selection is final — refresh decorations.
         if (bracketMatchingEnabled) applyInlineBracketMatching(editorElement);
         applyLineHighlight();
