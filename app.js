@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "261"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "262"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -1300,7 +1300,8 @@ btnPreview.addEventListener('click', async () => {
 
     clearErrorHighlights();
     logToConsole('--- Generating Preview ---');
-    const scriptCode = rawEditorCode || jar.toString(); 
+    //const scriptCode = rawEditorCode || jar.toString(); 
+	const scriptCode = jar.toString();
     const errorLogs = [];
 
     // Isolate % modifiers (ignoring math modulo operations)
@@ -1563,7 +1564,8 @@ btnRender.addEventListener('click', async () => {
 
     clearErrorHighlights();
     logToConsole('--- Rendering (F6 — solid only, % ignored) ---');
-    const renderCode = rawEditorCode || jar.toString();
+    //const renderCode = rawEditorCode || jar.toString();
+	const renderCode = jar.toString();
     const errorLogs = [];
 
     try {
