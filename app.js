@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "266"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "267"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -517,57 +517,15 @@ if (editorElement && typeof MutationObserver !== 'undefined') {
 }
 
 // ==========================================================================
-// 🛠️ COMPILATION ERROR HIGHLIGHTING
+// 🛠️ COMPILATION ERROR HIGHLIGHTING (CM6 — via bundle's lint diagnostics)
 // ==========================================================================
-function highlightErrorLine(lineNumber) {
-    clearErrorHighlights();
-    if (!lineNumber || lineNumber < 1) return;
-
-    const lineGutter = document.getElementById('line-numbers');
-    if (lineGutter) {
-        const lines = lineGutter.innerHTML.split('<br>');
-        if (lineNumber <= lines.length) {
-            lines[lineNumber - 1] = `<span class="gutter-error-flare">${lineNumber}</span>`;
-            lineGutter.innerHTML = lines.join('<br>');
-        }
-    }
-
-    const codeText = jar.toString();
-    const textLines = codeText.split('\n');
-    if (lineNumber > textLines.length) return;
-
-    let targetStartCharIndex = 0;
-    for (let i = 0; i < lineNumber - 1; i++) targetStartCharIndex += textLines[i].length + 1; 
-    let targetEndCharIndex = targetStartCharIndex + textLines[lineNumber - 1].length;
-    if (targetStartCharIndex === targetEndCharIndex) targetEndCharIndex++;
-
-    let currentAbsoluteOffset = 0;
-    const walker = document.createTreeWalker(editorElement, NodeFilter.SHOW_TEXT);
-    let currentNode = walker.nextNode();
-
-    while (currentNode) {
-        const nodeLength = currentNode.textContent.length;
-        const startOfThisNode = currentAbsoluteOffset;
-        const endOfThisNode = currentAbsoluteOffset + nodeLength;
-
-        if (endOfThisNode > targetStartCharIndex && startOfThisNode < targetEndCharIndex) {
-            let parentElement = currentNode.parentNode;
-            if (parentElement === editorElement) {
-                const spanWrap = document.createElement('span');
-                parentElement.insertBefore(spanWrap, currentNode);
-                spanWrap.appendChild(currentNode);
-                parentElement = spanWrap;
-            }
-            parentElement.classList.add('editor-error-line-glow');
-        }
-        currentAbsoluteOffset += nodeLength;
-        currentNode = walker.nextNode();
-    }
+function highlightErrorLine(lineNumber, message) {
+    if (!cmView || !lineNumber || lineNumber < 1) return;
+    window.scadCM.setErrorLine(cmView, lineNumber, message || 'Compilation error');
 }
 
 function clearErrorHighlights() {
-    editorElement.querySelectorAll('.editor-error-line-glow').forEach(el => el.classList.remove('editor-error-line-glow'));
-    if (typeof triggerLineUpdate === 'function') triggerLineUpdate();
+    if (cmView) window.scadCM.clearErrors(cmView);
 }
 
 // ==========================================================================
@@ -1519,11 +1477,23 @@ btnPreview.addEventListener('click', async () => {
             } else {
                 if (placeholderText) placeholderText.textContent = "❌ Preview Failed (Check Console)";
                 let detectedErrorLine = null;
+				let detectedErrorMsg = null;
+
+				/*
                 for (const logLine of errorLogs) {
                     const lineMatch = logLine.match(/line\s+(\d+)/i);
                     if (lineMatch) { detectedErrorLine = parseInt(lineMatch[1], 10); break; }
                 }
                 if (detectedErrorLine) highlightErrorLine(detectedErrorLine);
+				*/
+
+				// additional error message polish
+				for (const logLine of errorLogs) {
+    				const lineMatch = logLine.match(/line\s+(\d+)/i);
+    				if (lineMatch) { detectedErrorLine = parseInt(lineMatch[1], 10); detectedErrorMsg = logLine.trim(); break; }
+				}
+				if (detectedErrorLine) highlightErrorLine(detectedErrorLine, detectedErrorMsg);
+				
             }
         }
     } catch (error) {
