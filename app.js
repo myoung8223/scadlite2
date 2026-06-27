@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "256"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "257"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -175,6 +175,7 @@ async function deletePersistentSvg(filename) {
     } catch (err) { console.error(err); }
 }
 
+/*
 // 🍯 INITIALIZE CODEJAR INSTANCE
 const jar = CodeJar(
     editorElement, 
@@ -191,6 +192,41 @@ const jar = CodeJar(
     },
     { tab: '\t', history: true, indentOn: /[(\[{]$/, addClosing: false } 
 );
+*/
+
+// 🍯 INITIALIZE CODEMIRROR 6 (Stage 1 — replaces CodeJar; CodeJar/Prism removed in a later cleanup stage once proven)
+// paul-norman cpp bundle: exposes a global `cm6` instance with newEditor/newState/
+// newView/fromElement/textarea. cpp mode + line numbers + bracket matching +
+// active-line + close-brackets + Tab-indent + dark theme are all pre-baked.
+// We mount into #editor and expose a `jar`-shaped shim so Preview/Render/Save/
+// file-load (which call jar.toString()/jar.updateCode()) keep working unchanged.
+let cmView = null;
+const jar = (() => {
+    // newEditor(element, content, options) builds state+view and returns the view.
+    cmView = cm6.newEditor(editorElement, "", { dark: true });
+
+    return {
+        toString() {
+            return cmView.state.doc.toString();
+        },
+        updateCode(code) {
+            cmView.dispatch({
+                changes: { from: 0, to: cmView.state.doc.length, insert: code }
+            });
+            rawEditorCode = code;
+        },
+        // No-op stubs so stray CodeJar API calls (e.g. jar.onUpdate) don't throw in Stage 1.
+        onUpdate() {}
+    };
+})();
+
+// Keep rawEditorCode + the localStorage cache live as the user types.
+// (Stage 1 uses a DOM input listener; a later stage can switch to CM6's own
+// update listener for precision.)
+editorElement.addEventListener('input', () => {
+    rawEditorCode = jar.toString();
+    localStorage.setItem('openscad_editor_cache', rawEditorCode);
+});
 
 if (editorElement) {
     editorElement.addEventListener('click', () => {
