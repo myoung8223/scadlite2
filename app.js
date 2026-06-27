@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "258"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "259"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -220,12 +220,25 @@ const jar = (() => {
     };
 })();
 
+/*
 // Keep rawEditorCode + the localStorage cache live as the user types.
 // (Stage 1 uses a DOM input listener; a later stage can switch to CM6's own
 // update listener for precision.)
 editorElement.addEventListener('input', () => {
     rawEditorCode = jar.toString();
     localStorage.setItem('openscad_editor_cache', rawEditorCode);
+});
+*/
+
+// Keep rawEditorCode + the localStorage cache live as the user types.
+// CM6 commits each keystroke to its document AFTER the native `input` event
+// fires, so reading synchronously lags by one character (dropping the last
+// char typed). Defer to the next frame, when state.doc is current.
+editorElement.addEventListener('input', () => {
+    requestAnimationFrame(() => {
+        rawEditorCode = jar.toString();
+        localStorage.setItem('openscad_editor_cache', rawEditorCode);
+    });
 });
 
 if (editorElement) {
