@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "260"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "261"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -283,71 +283,19 @@ if (editorElement) {
 // ==========================================================================
 if (editorElement) {
     editorElement.addEventListener('keydown', (event) => {
-        if (false && event.key === 'Tab') {
-            event.preventDefault();
-            event.stopImmediatePropagation();
-
-            let { start, end } = getSelectionCharacterOffsetWithin(editorElement);
-            const value = jar.toString();
-            const selectedText = value.substring(start, end);
-            const isMultiLineSelection = selectedText.includes('\n');
-
-            if (!isMultiLineSelection && !event.shiftKey) {
-                const newCode = value.substring(0, start) + '\t' + value.substring(end);
-                jar.updateCode(newCode);
-                setSelectionCharacterOffsetWithin(editorElement, start + 1, start + 1);
-                return;
-            }
-
-            let adjustedEnd = end;
-            if (adjustedEnd > start && value[adjustedEnd - 1] === '\n') adjustedEnd--;
-
-            const selectStartLineStart = value.lastIndexOf('\n', start - 1) + 1;
-            const selectEndLineEnd = value.indexOf('\n', adjustedEnd);
-            const finalEndPos = selectEndLineEnd === -1 ? value.length : selectEndLineEnd;
-
-            const targetBlock = value.substring(selectStartLineStart, finalEndPos);
-            let modifiedBlock = "";
-            let newStart = start, newEnd = end;
-
-            if (!event.shiftKey) {
-                modifiedBlock = targetBlock.split('\n').map(line => '\t' + line).join('\n');
-                const linesBeforeStart = value.substring(selectStartLineStart, start).split('\n').length - 1;
-                const linesBeforeEnd = value.substring(selectStartLineStart, end).split('\n').length - 1;
-                newStart = start + linesBeforeStart + 1;
-                newEnd = end + linesBeforeEnd + 1;
-            } else {
-                let removedBeforeStart = 0, removedBeforeEnd = 0;
-                let currentPosInBlock = 0;
-                
-                modifiedBlock = targetBlock.split('\n').map(line => {
-                    let reduction = 0;
-                    let newLine = line;
-                    
-                    if (line.startsWith('\t')) { reduction = 1; newLine = line.substring(1); } 
-                    else if (line.startsWith('    ')) { reduction = 4; newLine = line.substring(4); } 
-                    else if (line.match(/^ +/)) {
-                        const spaces = line.match(/^ +/)[0].length;
-                        reduction = Math.min(spaces, 4);
-                        newLine = line.substring(reduction);
-                    }
-                    
-                    const absoluteLineStart = selectStartLineStart + currentPosInBlock;
-                    if (start > absoluteLineStart) removedBeforeStart += Math.min(reduction, start - absoluteLineStart);
-                    if (end > absoluteLineStart) removedBeforeEnd += Math.min(reduction, end - absoluteLineStart);
-                    
-                    currentPosInBlock += line.length + 1;
-                    return newLine;
-                }).join('\n');
-                
-                newStart = Math.max(selectStartLineStart, start - removedBeforeStart);
-                newEnd = Math.max(selectStartLineStart, end - removedBeforeEnd);
-            }
-
-            const newCode = value.substring(0, selectStartLineStart) + modifiedBlock + value.substring(finalEndPos);
-            jar.updateCode(newCode);
-            setSelectionCharacterOffsetWithin(editorElement, newStart, newEnd);
-        }
+		
+	if (event.key === 'Tab') {
+	            event.preventDefault();
+	            event.stopImmediatePropagation();
+	            // CM6-native tab insert, reading the caret from CM6's own state
+	            // (not DOM offset counting, which miscounts inside CM6's gutter/spans).
+	            const sel = cmView.state.selection.main;
+	            cmView.dispatch({
+	                changes: { from: sel.from, to: sel.to, insert: '\t' },
+	                selection: { anchor: sel.from + 1 }
+	            });
+	            return;
+	        }
     }, true);
 }
 
