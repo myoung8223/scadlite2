@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "267"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "268"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -219,43 +219,6 @@ const jar = (() => {
         onUpdate() {}
     };
 })();
-
-if (editorElement) {
-    editorElement.addEventListener('click', () => {
-        if (bracketMatchingEnabled) applyInlineBracketMatching(editorElement);
-    });
-    
-	editorElement.addEventListener('keyup', (e) => {
-        const triggerKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown'];
-        if (bracketMatchingEnabled && triggerKeys.includes(e.key)) {
-            applyInlineBracketMatching(editorElement);
-        }
-    });
-
-    editorElement.addEventListener('keydown', (event) => {
-        if (false && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') {
-            event.preventDefault();
-            event.stopImmediatePropagation();
-            const fakeRedoEvent = new KeyboardEvent('keydown', {
-                key: 'Z', code: 'KeyZ', ctrlKey: true, shiftKey: true, bubbles: true, cancelable: true
-            });
-            editorElement.dispatchEvent(fakeRedoEvent);
-        }
-
-		if (false && event.key === 'Delete') {
-            if (event.ctrlKey || event.metaKey) return; // let Ctrl+Del pass through
-            event.preventDefault();
-            event.stopImmediatePropagation();
-            const { start, end } = getSelectionCharacterOffsetWithin(editorElement);
-            const value = jar.toString();
-            if (start >= value.length && start === end) return; // at end of file, nothing to delete
-            const deleteEnd = start !== end ? end : start + 1;
-            const newCode = value.substring(0, start) + value.substring(deleteEnd);
-            jar.updateCode(newCode);
-            setSelectionCharacterOffsetWithin(editorElement, start, start);
-        }
-    });
-}
 
 // ==========================================================================
 // 📐 SMART MULTI-LINE BLOCK INDENTATION ENGINE
