@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "271"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "272"; // <-- Incremented for SVG Import Database & Grid Layout
 
 // 🍯 Import standalone, offline-ready CodeJar framework
 import { CodeJar } from './libs/codejar.min.js';
@@ -267,139 +267,6 @@ if (toggleBracketBtn) {
 }
 
 // ==========================================================================
-// ✏️ LINE HIGHLIGHTING TOGGLE
-// ==========================================================================
-// ==========================================================================
-// ✏️ LINE HIGHLIGHTING TOGGLE  (overlay now lives OUTSIDE the contenteditable)
-// ==========================================================================
-const toggleLineHighlightBtn = document.getElementById('btn-toggle-line-highlight');
-
-// Base style for the active-line bar. It's a sibling of #editor inside
-// .editor-wrapper, so Prism's innerHTML rewrites can't destroy it and it can't
-// move the caret. Painted on top of the editor (translucent) since #editor's
-// background is opaque.
-const lineHighlightStyle = document.createElement('style');
-lineHighlightStyle.id = 'line-highlight-style';
-lineHighlightStyle.textContent = `
-  #line-highlight-overlay {
-    position: absolute;
-    pointer-events: none;
-    z-index: 2;
-    display: none;
-    background-color: rgba(255, 255, 255, 0.08);
-    border-left: 2px solid rgba(0, 194, 255, 0.4);
-  }`;
-document.head.appendChild(lineHighlightStyle);
-
-// Create the overlay as a sibling of #editor (inside .editor-wrapper).
-let lineHighlightOverlay = document.getElementById('line-highlight-overlay');
-if (!lineHighlightOverlay && editorElement && editorElement.parentElement) {
-    lineHighlightOverlay = document.createElement('div');
-    lineHighlightOverlay.id = 'line-highlight-overlay';
-    editorElement.parentElement.appendChild(lineHighlightOverlay);
-}
-
-// Resolve the editor's line height robustly across browsers (computed
-// line-height may come back as px, "normal", or a unitless multiplier).
-function getEditorLineHeight() {
-    const cs = getComputedStyle(editorElement);
-    const lhRaw = cs.lineHeight;
-    let lh = parseFloat(lhRaw);
-    if (!lh || lhRaw === 'normal' || lhRaw.trim() === String(lh)) {
-        const fs = parseFloat(cs.fontSize) || 14;
-        lh = (lhRaw === 'normal' || !lh) ? fs * 1.5 : lh * fs;
-    }
-    return lh;
-}
-
-function applyLineHighlight() {
-    if (!lineHighlightingEnabled || !editorElement) { clearLineHighlight(); return; }
-
-    // Fully empty editor — nothing to draw.
-    if (editorElement.textContent.length === 0) { clearLineHighlight(); return; }
-
-    const sel = window.getSelection();
-    if (!sel.rangeCount) { clearLineHighlight(); return; }
-    const range = sel.getRangeAt(0);
-    if (!editorElement.contains(range.startContainer)) { clearLineHighlight(); return; }
-
-    // Character offset of the caret within the editor.
-    const text = editorElement.textContent;
-    let cursorIndex = 0;
-    const tw = document.createTreeWalker(editorElement, NodeFilter.SHOW_TEXT);
-    let n = tw.nextNode();
-    while (n) {
-        if (n === range.startContainer) { cursorIndex += range.startOffset; break; }
-        cursorIndex += n.textContent.length;
-        n = tw.nextNode();
-    }
-
-    // With white-space: pre and no wrapping, one '\n'-delimited line == one
-    // visual line of fixed height, so pure grid math is exact for EVERY line —
-    // no getBoundingClientRect, no {0,0} empty-line special case, and no 1px
-    // mismatch between two code paths.
-    let lineNumber = text.substring(0, cursorIndex).split('\n').length - 1;
-
-    // CodeJar keeps a trailing '\n' that creates a navigable phantom line below
-    // your last real line. Clamp so the bar never draws on it.
-    const realLineCount = (text.endsWith('\n') ? text.slice(0, -1) : text).split('\n').length;
-    if (lineNumber > realLineCount - 1) lineNumber = realLineCount - 1;
-    if (lineNumber < 0) lineNumber = 0;
-
-    const lineHeight  = getEditorLineHeight();
-    const paddingTop  = parseFloat(getComputedStyle(editorElement).paddingTop) || 15;
-
-    // offsetTop/offsetLeft are relative to .editor-wrapper (the overlay's
-    // containing block), so this auto-adjusts when the line-number gutter is
-    // toggled off. Subtract scrollTop because the overlay no longer scrolls
-    // with the content.
-    const top = editorElement.offsetTop + paddingTop
-              + lineNumber * lineHeight
-              - editorElement.scrollTop;
-
-    const overlay = lineHighlightOverlay
-        || (lineHighlightOverlay = document.getElementById('line-highlight-overlay'));
-    if (!overlay) return;
-
-    // Hide if the highlighted line is scrolled out of view.
-    const wrapperHeight = editorElement.parentElement.clientHeight;
-    if (top + lineHeight <= 0 || top >= wrapperHeight) { overlay.style.display = 'none'; return; }
-
-    overlay.style.left   = editorElement.offsetLeft + 'px';
-    overlay.style.right  = '0';
-    overlay.style.top    = top + 'px';
-    overlay.style.height = lineHeight + 'px';
-    overlay.style.display = 'block';
-}
-
-function clearLineHighlight() {
-    const overlay = lineHighlightOverlay || document.getElementById('line-highlight-overlay');
-    if (overlay) overlay.style.display = 'none';
-}
-
-if (editorElement) {
-    editorElement.addEventListener('click', applyLineHighlight);
-    editorElement.addEventListener('keyup', (e) => {
-        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End',
-             'PageUp', 'PageDown'].includes(e.key)) {
-            applyLineHighlight();
-        }
-    });
-}
-
-if (toggleLineHighlightBtn) {
-    const applyLineHighlightLayout = (enabled) => {
-        lineHighlightingEnabled = enabled;
-        localStorage.setItem('openscad_line_highlight', enabled ? 'enabled' : 'disabled');
-        toggleLineHighlightBtn.textContent = enabled ? 'Enabled' : 'Disabled';
-        toggleLineHighlightBtn.style.backgroundColor = enabled ? '#28a745' : '#dc3545';
-        if (!enabled) clearLineHighlight(); else applyLineHighlight();
-    };
-    applyLineHighlightLayout(lineHighlightingEnabled);
-    toggleLineHighlightBtn.addEventListener('click', () => applyLineHighlightLayout(!lineHighlightingEnabled));
-}
-
-// ==========================================================================
 // 🖥️ PERSISTENT CONSOLE TOGGLE
 // ==========================================================================
 const toggleConsoleBtn = document.getElementById('btn-toggle-console');
@@ -445,12 +312,10 @@ if (editorElement && lineNumbersDiv && toggleLinesBtn) {
         }
 		updateLineNumbers(code);
 		localStorage.setItem('openscad_editor_cache', code);
-		applyLineHighlight(); // 🆕 highlight now follows typing, not just navigation
 	});
 
 	editorElement.addEventListener('scroll', () => {
 		lineNumbersDiv.scrollTop = editorElement.scrollTop;
-		applyLineHighlight(); // 🆕 keep the bar pinned to the right line while scrolling
 	});
 
     let isLinesEnabled = localStorage.getItem('openscad_lines_visible') !== 'disabled';
@@ -507,7 +372,6 @@ if (editorElement && editorFontSizeSelect) {
         localStorage.setItem('openscad_editor_font_size', newSize);
         if (typeof triggerLineUpdate === 'function') triggerLineUpdate();
 		if (typeof triggerLineUpdate === 'function') triggerLineUpdate();
-        applyLineHighlight(); // 🆕 line height changed; re-place the bar
     });
 }
 
