@@ -1,7 +1,7 @@
 # SCADLite
 
 <a href="https://raw.githubusercontent.com/myoung8223/scadlite/refs/heads/main/title.png" target="_blank">
-<img alt="image" src="https://raw.githubusercontent.com/myoung8223/scadlite/refs/heads/main/title.png" />
+<img alt="image" src="https://github.com/myoung8223/scadlite2/blob/main/title_20260628.png" />
 </a>
 
 SCADLite is a lightweight, browser-optimized Progressive Web App (PWA) that pairs a feature-rich development workspace with a high-performance 3D viewport. It compiles and renders OpenSCAD geometry entirely client-side using WebAssembly (WASM) and functions 100% offline once installed. Write, preview, and iterate on 3D models instantly without local desktop installations. 
