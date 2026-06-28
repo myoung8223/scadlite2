@@ -804,58 +804,43 @@ btnPreview.addEventListener('click', async () => {
 		logToConsole(`🪲 [DEBUG] char at rootModifierIndex: "${scriptCode[rootModifierIndex]}" context: "${scriptCode.slice(rootModifierIndex-10, rootModifierIndex+10)}"`);
 	}
 
-	// Extract ! subtree for both passes when root modifier is present
-    let isolatedSource = null;
+	let isolatedSource = null;
 	if (hasRootModifier && rootModifierIndex !== -1) {
-        const preamble = scriptCode.slice(0, rootModifierIndex)
-            .split('\n')
-			.filter(line => {
-			    const t = line.trim();
-			    return t === '' || 
-			           t.startsWith('//') || 
-			           t.startsWith('/*') || 
-			           t.startsWith('*') ||
-			           (/^[\$a-zA-Z_][a-zA-Z0-9_]*\s*=/.test(t) && 
-			            t.endsWith(';') && 
-			            !t.includes('(') &&
-			            !t.includes(')'));
-			})
-            .join('\n');
-
-        // Use a mini-parser to extract exactly one complete statement after !
-        const afterBang = scriptCode.slice(rootModifierIndex + 1).trimStart();
-        let si = 0;
-        let parenDepth = 0, braceDepth = 0, bracketDepth = 0;
-        let inStr = false, inLC = false, inBC = false;
-        let statementEnd = afterBang.length;
-
-        while (si < afterBang.length) {
-            const ch = afterBang[si];
-            if (inLC) { if (ch === '\n') inLC = false; si++; continue; }
-            if (inBC) { if (ch === '*' && afterBang[si+1] === '/') { inBC = false; si++; } si++; continue; }
-            if (inStr) { if (ch === '\\') si++; else if (ch === '"') inStr = false; si++; continue; }
-            if (ch === '"') { inStr = true; si++; continue; }
-            if (ch === '/' && afterBang[si+1] === '/') { inLC = true; si += 2; continue; }
-            if (ch === '/' && afterBang[si+1] === '*') { inBC = true; si += 2; continue; }
-            if (ch === '(') { parenDepth++; si++; continue; }
-            if (ch === ')') { parenDepth--; si++; continue; }
-            if (ch === '[') { bracketDepth++; si++; continue; }
-            if (ch === ']') { bracketDepth--; si++; continue; }
-            if (ch === '{') { braceDepth++; si++; continue; }
-            if (ch === '}') {
-                if (braceDepth === 0) { statementEnd = si; break; } // unmatched } = end
-                braceDepth--; si++;
-                if (braceDepth === 0 && parenDepth === 0) { statementEnd = si; break; } // closed block
-                continue;
-            }
-            if (ch === ';' && parenDepth === 0 && braceDepth === 0 && bracketDepth === 0) {
-                statementEnd = si + 1; break; // semicolon at top level = end of statement
-            }
-            si++;
-        }
-
-        isolatedSource = preamble + '\n' + afterBang.slice(0, statementEnd);
-    }
+	    // All top-level definitions from the WHOLE file: assignments (multiline / parens /
+	    // comments OK), modules, functions, use/include. Order-independent in OpenSCAD scope.
+	    const definitions = collectTopLevelDefinitions(scriptCode);
+	
+	    // Exactly one complete statement starting at the ! — the marked subtree. UNCHANGED.
+	    const afterBang = scriptCode.slice(rootModifierIndex + 1).trimStart();
+	    let si = 0;
+	    let parenDepth = 0, braceDepth = 0, bracketDepth = 0;
+	    let inStr = false, inLC = false, inBC = false;
+	    let statementEnd = afterBang.length;
+	    while (si < afterBang.length) {
+	        const ch = afterBang[si];
+	        if (inLC) { if (ch === '\n') inLC = false; si++; continue; }
+	        if (inBC) { if (ch === '*' && afterBang[si+1] === '/') { inBC = false; si++; } si++; continue; }
+	        if (inStr) { if (ch === '\\') si++; else if (ch === '"') inStr = false; si++; continue; }
+	        if (ch === '"') { inStr = true; si++; continue; }
+	        if (ch === '/' && afterBang[si+1] === '/') { inLC = true; si += 2; continue; }
+	        if (ch === '/' && afterBang[si+1] === '*') { inBC = true; si += 2; continue; }
+	        if (ch === '(') { parenDepth++; si++; continue; }
+	        if (ch === ')') { parenDepth--; si++; continue; }
+	        if (ch === '[') { bracketDepth++; si++; continue; }
+	        if (ch === ']') { bracketDepth--; si++; continue; }
+	        if (ch === '{') { braceDepth++; si++; continue; }
+	        if (ch === '}') {
+	            if (braceDepth === 0) { statementEnd = si; break; }
+	            braceDepth--; si++;
+	            if (braceDepth === 0 && parenDepth === 0) { statementEnd = si; break; }
+	            continue;
+	        }
+	        if (ch === ';' && parenDepth === 0 && braceDepth === 0 && bracketDepth === 0) { statementEnd = si + 1; break; }
+	        si++;
+	    }
+	
+	    isolatedSource = definitions + '\n' + afterBang.slice(0, statementEnd);
+	}
 	
     try {
         // --- INSTANCE SETTINGS BUILDER FUNCTION ---
@@ -2772,6 +2757,75 @@ function isolateHighlights(code) {
         skipWS();
     }
     return output;
+}
+
+// Split source into complete top-level statements, depth- and comment-aware.
+// Handles ; -terminated statements, balanced {} blocks, and use/include <...>.
+function splitTopLevelStatements(code) {
+    const out = [];
+    let i = 0;
+    const n = code.length;
+
+    const skipTrivia = () => {
+        while (i < n) {
+            const ch = code[i];
+            if (/\s/.test(ch)) i++;
+            else if (ch === '/' && code[i+1] === '/') { while (i < n && code[i] !== '\n') i++; }
+            else if (ch === '/' && code[i+1] === '*') { i += 2; while (i < n && !(code[i] === '*' && code[i+1] === '/')) i++; i += 2; }
+            else break;
+        }
+    };
+
+    while (i < n) {
+        skipTrivia();
+        if (i >= n) break;
+        const start = i;
+        const isUseInc = /^(use|include)\s*</.test(code.slice(i, i + 12));
+
+        let paren = 0, brace = 0, bracket = 0;
+        let inStr = false, inLC = false, inBC = false;
+        let end = n;
+
+        while (i < n) {
+            const ch = code[i];
+            if (inLC) { if (ch === '\n') inLC = false; i++; continue; }
+            if (inBC) { if (ch === '*' && code[i+1] === '/') { inBC = false; i += 2; continue; } i++; continue; }
+            if (inStr) { if (ch === '\\') i += 2; else { if (ch === '"') inStr = false; i++; } continue; }
+            if (ch === '"') { inStr = true; i++; continue; }
+            if (ch === '/' && code[i+1] === '/') { inLC = true; i += 2; continue; }
+            if (ch === '/' && code[i+1] === '*') { inBC = true; i += 2; continue; }
+
+            if (isUseInc && ch === '>' && paren === 0 && brace === 0 && bracket === 0) { i++; end = i; break; }
+            if (ch === '(') paren++;
+            else if (ch === ')') paren--;
+            else if (ch === '[') bracket++;
+            else if (ch === ']') bracket--;
+            else if (ch === '{') brace++;
+            else if (ch === '}') {
+                if (brace === 0) { end = i; break; }                 // stray close — stop before it
+                brace--;
+                if (brace === 0 && paren === 0 && bracket === 0) { i++; end = i; break; }
+                i++; continue;
+            }
+            else if (ch === ';' && paren === 0 && brace === 0 && bracket === 0) { i++; end = i; break; }
+            i++;
+        }
+        if (end <= start) { end = n; i = n; }
+        out.push(code.slice(start, end));
+    }
+    return out;
+}
+
+function isDefinitionStatement(text) {
+    const s = text.trimStart();
+    if (/^module\b/.test(s)) return true;
+    if (/^function\b/.test(s)) return true;
+    if (/^(use|include)\s*</.test(s)) return true;
+    return /^[$A-Za-z_]\w*\s*=(?!=)/.test(s);   // assignment (not ==, <=, etc.)
+}
+
+function collectTopLevelDefinitions(code) {
+    return splitTopLevelStatements(code).filter(isDefinitionStatement).join('\n');
 }
 
 function isolateOpenSCADGhosts(code, stripAllGhostsMode = false) {
