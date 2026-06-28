@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "276"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "277"; // <-- Incremented for SVG Import Database & Grid Layout
 
 import OpenSCAD from './libs/openscad.js';
 
@@ -880,6 +880,42 @@ btnPreview.addEventListener('click', async () => {
                 try { instance.FS.writeFile(`/${svgName}`, new Uint8Array(svgCache[svgName])); } catch (e) {}
             }
         };
+
+		// ---------------------------------------------------------
+        // 🩺 PRE-PASS: code check (line-faithful, no geometry)
+        // Raw editor code → .csg export. Evaluates the script (catching
+        // syntax / undefined-var / type / missing-module errors) WITHOUT
+        // meshing. Because the code is unmodified, reported line numbers
+        // map 1:1 to the editor. Abort on any hard ERROR.
+        // ---------------------------------------------------------
+        logToConsole("🩺 Running pre-pass code check...");
+        const checkInstance = await createWasmInstance();
+        mapExternalResources(checkInstance);
+        checkInstance.FS.writeFile('/check.scad', scriptCode);
+
+        try {
+            checkInstance.callMain(['/check.scad', '-o', '/check.csg']);
+        } catch (e) { /* nonzero exit throws; errors are in errorLogs */ }
+
+        const hardErrors = errorLogs.filter(l => l.trim().startsWith('ERROR:'));
+        if (hardErrors.length > 0) {
+            let errLine = null, errMsg = hardErrors[0].trim();
+            for (const l of hardErrors) {
+                const m = l.match(/line\s+(\d+)/i);
+                if (m) { errLine = parseInt(m[1], 10); errMsg = l.trim(); break; }
+            }
+            if (errLine) highlightErrorLine(errLine, errMsg);
+            if (placeholderText) {
+                placeholderText.textContent = "❌ Code Error (Check Console)";
+                placeholderText.style.display = 'flex';
+            }
+            logToConsole(`🛑 Pre-pass halted preview: ${errMsg}`);
+            return; // skip the multi-pass entirely
+        }
+
+        // Clean — wipe pre-pass warnings so the real passes log fresh
+        errorLogs.length = 0;
+        logToConsole("✅ Pre-pass clean. Proceeding to multi-pass preview...");
 
         // ---------------------------------------------------------
         // 🚀 PASS 1: CORE SOLID COMPILER (INSTANCE 1)
