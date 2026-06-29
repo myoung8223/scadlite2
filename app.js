@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "277"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "278"; // <-- Incremented for SVG Import Database & Grid Layout
 
 import OpenSCAD from './libs/openscad.js';
 
@@ -23,6 +23,7 @@ const closeHelpBtn = document.getElementById('close-help-btn');
 const helpOverlay = document.getElementById('help-overlay');
 const btnSettingsCheatSheet = document.getElementById('btn-settings-cheat-sheet');
 const settingsOverlay = document.getElementById('settings-overlay');
+const btnExportFormat = document.getElementById('btn-export-format');
 
 // 🌐 THREE.JS SCOPE VARIABLES
 let scene, camera, renderer, controls, currentMesh = null;
@@ -447,6 +448,7 @@ const savedColorHexStr = localStorage.getItem('openscad_model_color') || '#3b82f
 if (modelColorInput) modelColorInput.value = savedColorHexStr;
 if (btnColorTrigger) btnColorTrigger.style.background = savedColorHexStr;
 let activeModelColor = parseInt(savedColorHexStr.replace('#', '0x'), 16);
+let exportFormat = localStorage.getItem('openscad_export_format') || 'STL';
 
 // ❌ Close Help Menu Button Listener
 if (closeHelpBtn && helpOverlay) {
@@ -627,6 +629,19 @@ modelColorInput.addEventListener('input', (event) => {
     activeModelColor = parseInt(selectedHex.replace('#', '0x'), 16);
     if (currentMesh && currentMesh.material) currentMesh.material.color.setHex(activeModelColor);
 });
+if (btnExportFormat) {
+    const applyExportFormat = (fmt) => {
+        exportFormat = fmt;
+        localStorage.setItem('openscad_export_format', fmt);
+        btnExportFormat.textContent = fmt;
+        // Blue = 3MF (carries color); neutral gray = STL (geometry only)
+        btnExportFormat.style.background = (fmt === '3MF') ? '#007acc' : '#6c757d';
+    };
+    applyExportFormat(exportFormat);
+    btnExportFormat.addEventListener('click', () => {
+        applyExportFormat(exportFormat === 'STL' ? '3MF' : 'STL');
+    });
+}
 
 // ❓ Open Cheat Sheet from Settings Menu
 if (btnSettingsCheatSheet && settingsOverlay && helpOverlay) {
@@ -1149,50 +1164,106 @@ btnRender.addEventListener('click', async () => {
     }
 });
 
-// STL export feature
-btnExport.addEventListener('click', () => {
-    if (!currentMesh) {
-        logToConsole(`[ERROR]: No model loaded to export.`);
+// Export feature
+btnExport.addEventListener('click', async () => {
+    if (!openSCADFactory) return;
+
+    const exportCode = jar.toString();
+    if (!exportCode || exportCode.trim() === '') {
+        logToConsole('[ERROR]: No code to export.');
         return;
     }
-    
-	try {
-        logToConsole(`⚙️ Preparing geometry for STL export...`);
-        
-        const exporter = new THREE.STLExporter();
-        
-        // Clone the mesh group and deep-clone geometries to avoid modifying the live preview
-        const exportClone = currentMesh.clone();
-        exportClone.traverse((child) => {
-            if (child.isMesh && child.geometry) {
-                child.geometry = child.geometry.clone();
+
+    logToConsole(`⚙️ Re-compiling current code for ${exportFormat} export...`);
+    const errorLogs = [];
+
+    try {
+        const exportInstance = await openSCADFactory({
+            noInitialRun: true,
+            locateFile: (path) => `./libs/openscad.wasm`,
+            ENV: { HOME: '/home/web_user' },
+            preRun: [
+                function(Module) {
+                    try { Module.FS.mkdir('/home'); } catch(e) {}
+                    try { Module.FS.mkdir('/home/web_user'); } catch(e) {}
+                    try { Module.FS.mkdir('/home/web_user/.fonts'); } catch(e) {}
+                    for (const fontName of Object.keys(fontCache)) {
+                        try {
+                            Module.FS.writeFile(`/home/web_user/.fonts/${fontName}`, new Uint8Array(fontCache[fontName]));
+                        } catch (fsErr) {}
+                    }
+                }
+            ],
+            print: (text) => logToConsole(`[OpenSCAD]: ${text}`),
+            printErr: (text) => { errorLogs.push(text); logToConsole(`[ERROR]: ${text}`); }
+        });
+
+        // Map imported STL/SVG resources
+        for (const stlName of Object.keys(stlCache)) {
+            try { exportInstance.FS.writeFile(`/${stlName}`, new Uint8Array(stlCache[stlName])); } catch (e) {}
+        }
+        for (const svgName of Object.keys(svgCache)) {
+            try { exportInstance.FS.writeFile(`/${svgName}`, new Uint8Array(svgCache[svgName])); } catch (e) {}
+        }
+
+        // Single raw pass — identical semantics to Render (F6): % ignored, no ghost/highlight
+        exportInstance.FS.writeFile('/export_input.scad', exportCode);
+
+        let exportData = null;
+        try {
+            exportInstance.callMain(['/export_input.scad', '--backend=manifold', '-o', '/export.3mf']);
+            if (exportInstance.FS.analyzePath('/export.3mf').exists) {
+                exportData = exportInstance.FS.readFile('/export.3mf');
             }
-        });
+        } catch (err) {
+            logToConsole('Export compile finished.');
+        }
 
-        // Reset rotation — undoes the Three.js display correction (rotation.x = -PI/2)
-        // leaving geometry in OpenSCAD's native Z-up orientation, which slicers expect
-        exportClone.rotation.set(0, 0, 0);
-        exportClone.updateMatrix();
-        exportClone.updateMatrixWorld(true);
+        if (!exportData) {
+            if (errorLogs.some(l => l.trim().startsWith('ERROR:'))) {
+                logToConsole('[ERROR]: Export aborted — code has a compile error (check console).');
+            } else if (errorLogs.some(l => l.includes('Current top level object is empty'))) {
+                logToConsole('[ERROR]: Nothing to export — current code produced no geometry.');
+            } else {
+                logToConsole('[ERROR]: Export failed (check console).');
+            }
+            return;
+        }
 
-        logToConsole(`📦 Packaging geometry into binary STL...`);
-        const stlResult = exporter.parse(exportClone, { binary: true });
-        
-        const stlBlob = new Blob([stlResult], { type: 'application/octet-stream' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(stlBlob);
-        const projectName = projectNameInput.value.trim() || "openscad_model";
-        link.download = `${projectName}.stl`;
-        link.click();
-        
-        exportClone.traverse((child) => {
-            if (child.isMesh && child.geometry) child.geometry.dispose();
-        });
-        
-        logToConsole(`✔ Exported ${projectName}.stl successfully!`);
-    } catch (exportErr) {
-        logToConsole(`[ERROR]: Failed to export STL geometry: ${exportErr.message}`);
-        console.error(exportErr);
+        const projectName = projectNameInput.value.trim() || 'openscad_model';
+
+        if (exportFormat === '3MF') {
+            // Write the freshly-compiled 3MF bytes straight to disk (native Z-up, color preserved)
+            const blob = new Blob([exportData], { type: 'application/vnd.ms-package.3dmanufacturing-3dmodel+xml' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `${projectName}.3mf`;
+            link.click();
+            logToConsole(`✔ Exported ${projectName}.3mf successfully!`);
+        } else {
+            // STL: parse the fresh 3MF to a group (already Z-up native) and serialize.
+            // No rotation dance needed — we never applied the -PI/2 display correction here.
+            logToConsole('📦 Packaging geometry into binary STL...');
+            ensureJSZipShim();
+            const loader = new THREE.ThreeMFLoader();
+            const group = loader.parse(new Uint8Array(exportData).buffer);
+
+            const exporter = new THREE.STLExporter();
+            const stlResult = exporter.parse(group, { binary: true });
+
+            const blob = new Blob([stlResult], { type: 'application/octet-stream' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.href = link.href; // (kept simple; URL already set)
+            link.download = `${projectName}.stl`;
+            link.click();
+
+            group.traverse((child) => { if (child.isMesh && child.geometry) child.geometry.dispose(); });
+            logToConsole(`✔ Exported ${projectName}.stl successfully!`);
+        }
+    } catch (error) {
+        logToConsole(`[ERROR]: Export failed: ${error.message || error}`);
+        console.error(error);
     }
 });
 
@@ -1618,6 +1689,29 @@ function update3DModelViewer(solidData, ghostData = null, highlightData = null) 
             placeholderText.style.display = 'flex';
         }
     }
+}
+
+function ensureJSZipShim() {
+    if (window.JSZip) return; // already set up by update3DModelViewer
+    if (typeof fflate === 'undefined') throw new Error("fflate.js library is missing.");
+    window.JSZip = {
+        loadAsync: async function(data) {
+            const bytes = new Uint8Array(data);
+            const unzippedFiles = fflate.unzipSync(bytes);
+            return {
+                file: function(relativePath) {
+                    const fileData = unzippedFiles[relativePath];
+                    if (!fileData) return null;
+                    return {
+                        async: async function(type) {
+                            if (type === 'string') return new TextDecoder().decode(fileData);
+                            return fileData.buffer;
+                        }
+                    };
+                }
+            };
+        }
+    };
 }
 
 btnPreview.disabled = true; btnRender.disabled = true; btnExport.disabled = true;
