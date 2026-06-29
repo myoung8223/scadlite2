@@ -28,6 +28,7 @@ The core purpose of this project is to make OpenSCAD design fully accessible on 
 
 - [x] **STL Importing:** Allow users to import STL files into the PWA and then import them into projects.
 - [x] **SVG Importing:** Allow users to import SVG files into the PWA and then import them into projects.
+- [x] **3MF Exporting:** Allow users to toggle between exporting to 3MF or STL.
 - [x] **Custom Fonts:** Allow users to import TTF files into the PWA and then use them into projects.
 - [ ] **Adjustable Axes and Grid:** Additional controls for the axes and grid would be handy, possibly even tick marks and numerical labels.
 - [x] **Replace textarea with a syntax-highlighting editor:** Migrated the editing surface to a custom CodeMirror 6 bundle for syntax highlighting, bracket matching, and structural editing.
