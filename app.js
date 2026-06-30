@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "281"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "282"; // <-- Incremented for SVG Import Database & Grid Layout
 
 import OpenSCAD from './libs/openscad.js';
 
@@ -629,11 +629,18 @@ modelColorInput.addEventListener('input', (event) => {
     activeModelColor = parseInt(selectedHex.replace('#', '0x'), 16);
     if (currentMesh && currentMesh.material) currentMesh.material.color.setHex(activeModelColor);
 });
+
 if (btnExportFormat) {
     const applyExportFormat = (fmt) => {
         exportFormat = fmt;
         localStorage.setItem('openscad_export_format', fmt);
-        btnExportFormat.textContent = fmt;
+        
+        // Assign the emoji based on the current format
+        const icon = fmt === '3MF' ? '🎨' : '🧊'; // Feel free to swap 🧊 for 🌐 or 📐!
+        
+        // Update the button text to include both the emoji and the format name
+        btnExportFormat.textContent = `${icon} ${fmt}`;
+        
         // Blue = 3MF (carries color); neutral gray = STL (geometry only)
         btnExportFormat.style.background = (fmt === '3MF') ? '#007acc' : '#6c757d';
     };
