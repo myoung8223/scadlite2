@@ -3250,7 +3250,8 @@ function isolateOpenSCADGhosts(code, stripAllGhostsMode = false) {
             }
 
             if (isBooleanOp && anyChildGhost) {
-                const firstIsGhost = children[0].isSelfGhost || children[0].containsGhost;
+                //const firstIsGhost = children[0].isSelfGhost || children[0].containsGhost;
+				const firstIsGhost = children[0].isSelfGhost;
                 let allSolid = joinField('solidContent');
 				if (firstIsGhost) {
                     let subtractorContent = children.slice(1).map(c => c.solidContent).join("");
