@@ -1,5 +1,5 @@
 // ---- BUILD VERSION CONTROLLER ----
-const BUILD_NUMBER = "280"; // <-- Incremented for SVG Import Database & Grid Layout
+const BUILD_NUMBER = "281"; // <-- Incremented for SVG Import Database & Grid Layout
 
 import OpenSCAD from './libs/openscad.js';
 
@@ -3263,7 +3263,8 @@ function isolateOpenSCADGhosts(code, stripAllGhostsMode = false) {
                     };
                 }
                 // Positive volume is solid — keep original op, drop ghost subtractors
-                let solidOnly = children.filter(c => !c.isSelfGhost && !c.containsGhost).map(c => c.content).join("");
+                //let solidOnly = children.filter(c => !c.isSelfGhost && !c.containsGhost).map(c => c.content).join("");
+				let solidOnly = children.filter(c => !c.isSelfGhost).map(c => c.content).join("");
                 return {
                     solidContent: `${expression}\n{\n${allSolid}}\n`,
                     content:      `${expression}\n{\n${solidOnly}}\n`,
